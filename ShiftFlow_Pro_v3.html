@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShiftFlow Pro — サロンシフト管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0e1117;--surface:#161b27;--surface2:#1c2236;--border:#252d45;
+  --accent:#4f8cff;--accent2:#a259ff;--green:#22c55e;--red:#ef4444;
+  --yellow:#f59e0b;--orange:#f97316;--teal:#14b8a6;--pink:#ec4899;
+  --text:#e2e8f0;--muted:#64748b;--radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px}
+.app{display:flex;min-height:100vh}
+/* Sidebar */
+.sidebar{width:214px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto}
+.logo{padding:20px 18px 14px;border-bottom:1px solid var(--border)}
+.logo-main{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--accent);letter-spacing:-0.5px}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:2px;margin-top:2px}
+.nav{flex:1;padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.nav-section{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:10px 10px 4px;margin-top:4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;color:var(--muted);border:none;background:none;width:100%;font-family:inherit;font-size:12px;transition:all .15s;text-align:left}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(79,140,255,.15);color:var(--accent);font-weight:500}
+.nav-icon{width:18px;text-align:center;font-size:14px;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--yellow);color:#000;font-size:10px;padding:1px 5px;border-radius:8px;flex-shrink:0}
+.sidebar-footer{padding:10px 14px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)}
+/* Main */
+.main{margin-left:214px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.topbar-left{display:flex;align-items:center;gap:14px}
+.topbar-title{font-size:16px;font-weight:700}
+.month-nav{display:flex;align-items:center;gap:6px}
+.month-label{font-family:'Space Mono',monospace;font-size:12px;min-width:95px;text-align:center}
+.topbar-right{display:flex;gap:6px;flex-wrap:wrap}
+.content{padding:20px 24px;flex:1}
+.page{display:none}.page.active{display:block}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:none;transition:all .15s;font-family:inherit;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#3a76e8}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}.btn-secondary:hover{background:var(--border)}
+.btn-success{background:rgba(34,197,94,.15);color:var(--green)}.btn-success:hover{background:rgba(34,197,94,.3)}
+.btn-danger{background:rgba(239,68,68,.15);color:var(--red)}.btn-danger:hover{background:rgba(239,68,68,.3)}
+.btn-orange{background:rgba(249,115,22,.15);color:var(--orange)}.btn-orange:hover{background:rgba(249,115,22,.3)}
+.btn-teal{background:rgba(20,184,166,.15);color:var(--teal)}.btn-teal:hover{background:rgba(20,184,166,.3)}
+.btn-pink{background:rgba(236,72,153,.15);color:var(--pink)}.btn-pink:hover{background:rgba(236,72,153,.3)}
+.btn-sm{padding:4px 8px;font-size:11px}
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.card-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat-value{font-family:'Space Mono',monospace;font-size:22px;font-weight:700}
+.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+.stat-badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:12px;margin-top:5px}
+.badge-blue{background:rgba(79,140,255,.15);color:var(--accent)}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-yellow{background:rgba(245,158,11,.15);color:var(--yellow)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-orange{background:rgba(249,115,22,.15);color:var(--orange)}
+.badge-teal{background:rgba(20,184,166,.15);color:var(--teal)}
+.badge-pink{background:rgba(236,72,153,.15);color:var(--pink)}
+/* Section */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.section-title{font-size:17px;font-weight:700}
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid rgba(37,45,69,.4);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.table-wrap{overflow-x:auto}
+/* Monthly calendar */
+.cal-wrap{overflow-x:auto}
+.cal-table{border-collapse:collapse;font-size:11px}
+.cal-table th,.cal-table td{border:1px solid var(--border)}
+.cal-table th{background:var(--surface2);padding:5px 6px;text-align:center;font-size:10px;color:var(--muted);white-space:nowrap}
+.cal-name-col{padding:7px 10px;font-weight:500;background:var(--surface2);white-space:nowrap;min-width:65px;text-align:left;font-size:12px}
+.cal-cell{width:54px;height:36px;text-align:center;vertical-align:middle;cursor:pointer;transition:background .1s;position:relative}
+.cal-cell:hover:not(.closed):not(.half-closed){background:rgba(79,140,255,.1)}
+.cal-cell.sun{background:rgba(239,68,68,.04)}
+.cal-cell.sat{background:rgba(79,140,255,.04)}
+/* Closed states */
+.cal-cell.closed{background:repeating-linear-gradient(-45deg,rgba(239,68,68,.08),rgba(239,68,68,.08) 2px,transparent 2px,transparent 8px);cursor:not-allowed}
+.cal-cell.half-am{background:linear-gradient(to bottom,rgba(245,158,11,.12) 50%,transparent 50%);cursor:pointer}
+.cal-cell.half-pm{background:linear-gradient(to top,rgba(245,158,11,.12) 50%,transparent 50%);cursor:pointer}
+.closed-label{font-size:9px;color:var(--red);font-weight:600}
+.half-label{font-size:9px;color:var(--yellow);font-weight:600}
+/* Shift chips */
+.shift-chip{display:inline-block;padding:2px 4px;border-radius:3px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap}
+.s-倉敷A{background:rgba(79,140,255,.2);color:#7bb3ff}
+.s-倉敷B{background:rgba(162,89,255,.2);color:#c49aff}
+.s-倉敷C{background:rgba(20,184,166,.2);color:#5eead4}
+.s-倉敷D{background:rgba(34,197,94,.2);color:#4ade80}
+.s-倉敷E{background:rgba(245,158,11,.2);color:#fcd34d}
+.s-倉敷F{background:rgba(249,115,22,.2);color:#fb923c}
+.s-岡山A{background:rgba(99,102,241,.2);color:#a5b4fc}
+.s-岡山B{background:rgba(236,72,153,.2);color:#f9a8d4}
+.s-岡山C{background:rgba(16,185,129,.2);color:#6ee7b7}
+.s-岡山D{background:rgba(139,92,246,.2);color:#c4b5fd}
+.s-岡山E{background:rgba(59,130,246,.2);color:#93c5fd}
+.s-岡山F{background:rgba(52,211,153,.2);color:#34d399}
+.s-本社A{background:rgba(100,116,139,.25);color:#94a3b8}
+.s-本社B{background:rgba(148,163,184,.2);color:#cbd5e1}
+.s-PA1{background:rgba(251,191,36,.2);color:#fbbf24}
+.s-PA2{background:rgba(167,243,208,.25);color:#059669}
+.s-有給{background:rgba(34,197,94,.25);color:#4ade80}
+.s-振替{background:rgba(249,115,22,.25);color:#fb923c}
+.s-休日{background:rgba(100,116,139,.12);color:var(--muted)}
+.s-empty{color:var(--muted);font-size:10px}
+/* Store closure calendar */
+.closure-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.closure-day{border-radius:6px;border:1px solid var(--border);padding:6px;text-align:center;cursor:pointer;transition:all .15s;min-height:52px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.closure-day:hover{border-color:var(--accent)}
+.closure-day.sun{background:rgba(239,68,68,.04)}
+.closure-day.sat{background:rgba(79,140,255,.04)}
+.closure-day.is-closed{background:rgba(239,68,68,.15);border-color:var(--red)}
+.closure-day.is-half-am{background:linear-gradient(to bottom,rgba(245,158,11,.2) 50%,transparent 50%);border-color:var(--yellow)}
+.closure-day.is-half-pm{background:linear-gradient(to top,rgba(245,158,11,.2) 50%,transparent 50%);border-color:var(--yellow)}
+.closure-day-num{font-family:'Space Mono',monospace;font-size:13px;font-weight:700}
+.closure-day-dow{font-size:9px;color:var(--muted)}
+.closure-tag{font-size:9px;font-weight:600;padding:1px 4px;border-radius:3px;margin-top:1px}
+.closure-tag-closed{background:rgba(239,68,68,.3);color:var(--red)}
+.closure-tag-half{background:rgba(245,158,11,.3);color:var(--yellow)}
+/* Store tabs */
+.store-tabs{display:flex;gap:3px;margin-bottom:16px;flex-wrap:wrap}
+.store-tab{padding:6px 14px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--muted);border:1px solid var(--border);background:var(--surface2);font-family:inherit;transition:all .15s}
+.store-tab:hover{color:var(--text)}
+.store-tab.active{color:#fff;border-color:transparent}
+/* Tabs */
+.tabs{display:flex;gap:3px;background:var(--surface2);padding:3px;border-radius:8px;width:fit-content;margin-bottom:18px}
+.tab{padding:5px 14px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--muted);border:none;background:none;font-family:inherit;transition:all .15s}
+.tab.active{background:var(--surface);color:var(--text);font-weight:600}
+/* Modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;width:440px;max-width:96vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:16px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.form-group{margin-bottom:12px}
+label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+input,select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;color:var(--text);font-size:12px;font-family:inherit;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--surface2)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* Toast */
+.toast{position:fixed;bottom:18px;right:18px;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:11px 16px;font-size:12px;z-index:9999;transform:translateY(60px);opacity:0;transition:all .3s;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-color:var(--green)}.toast.error{border-color:var(--red)}
+/* Hours bar */
+.hbar-wrap{background:var(--surface2);border-radius:3px;height:5px;margin-top:3px;overflow:hidden}
+.hbar{height:100%;border-radius:3px;transition:width .3s}
+.hbar-ok{background:var(--accent)}.hbar-warn{background:var(--yellow)}.hbar-over{background:var(--red)}
+/* Store view */
+.store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.store-card-v{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.store-card-title{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.store-dot{width:8px;height:8px;border-radius:50%}
+/* Summary row */
+.summary-row td{background:var(--surface2);font-weight:600;font-family:'Space Mono',monospace;font-size:11px}
+/* Init banner */
+.init-banner{background:linear-gradient(135deg,rgba(79,140,255,.15),rgba(162,89,255,.1));border:1px solid rgba(79,140,255,.3);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.init-banner-text{font-size:13px}
+.init-banner-sub{font-size:11px;color:var(--muted);margin-top:3px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="app">
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-main">ShiftFlow<span style="color:var(--accent2)"> Pro</span></div>
+    <div class="logo-sub">サロンシフト管理 v3</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">メイン</div>
+    <button class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span>ダッシュボード</button>
+    <button class="nav-item" onclick="showPage('monthly')"><span class="nav-icon">📅</span>月次シフト表</button>
+    <button class="nav-item" onclick="showPage('weekly')"><span class="nav-icon">🗓</span>週次シフト表</button>
+    <div class="nav-section">店舗</div>
+    <button class="nav-item" onclick="showPage('closure')"><span class="nav-icon">🚪</span>定休日・半休設定</button>
+    <button class="nav-item" onclick="showPage('store')"><span class="nav-icon">🏪</span>店舗別出勤一覧</button>
+    <div class="nav-section">管理</div>
+    <button class="nav-item" onclick="showPage('requests')">
+      <span class="nav-icon">📝</span>希望・有給・振替
+      <span class="nav-badge" id="badge-req" style="display:none">0</span>
+    </button>
+    <button class="nav-item" onclick="showPage('staff')"><span class="nav-icon">👥</span>スタッフ管理</button>
+  </nav>
+  <div style="padding:10px 14px;border-top:1px solid var(--border)">
+  <div id="save-status" style="font-size:11px;margin-bottom:6px;color:var(--muted)">⚙️ GAS未設定</div>
+  <div style="display:flex;gap:4px">
+    <button class="btn btn-secondary btn-sm" style="flex:1;font-size:10px" onclick="loadFromGAS()">📥 読込</button>
+    <button class="btn btn-primary btn-sm" style="flex:1;font-size:10px" onclick="saveToGAS(true)">💾 保存</button>
+  </div>
+  <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:4px;font-size:10px" onclick="openModal('modal-settings')">⚙️ GAS設定</button>
+</div>
+<div class="sidebar-footer">© ShiftFlow Pro 2026</div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title" id="page-title">ダッシュボード</div>
+      <div class="month-nav">
+        <button class="btn btn-secondary btn-sm" onclick="changeMonth(-1)">◀</button>
+        <div class="month-label" id="month-label"></div>
+        <button class="btn btn-secondary btn-sm" onclick="changeMonth(1)">▶</button>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-pink btn-sm" onclick="initAllWorking()">🔄 全員出勤で初期化</button>
+      <button class="btn btn-teal btn-sm" onclick="openModal('modal-special')">＋ 有給・振替</button>
+      <button class="btn btn-secondary btn-sm" onclick="openModal('modal-request')">＋ 希望入力</button>
+      <button class="btn btn-primary btn-sm" onclick="exportExcel()">📥 Excel出力</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-value" id="d-staff">4</div><div class="stat-label">スタッフ数</div><span class="stat-badge badge-blue">在籍中</span></div>
+        <div class="stat-card"><div class="stat-value" id="d-shifts">—</div><div class="stat-label">今月の総シフト数</div><span class="stat-badge badge-green">確定</span></div>
+        <div class="stat-card"><div class="stat-value" id="d-pending">0</div><div class="stat-label">承認待ち</div><span class="stat-badge badge-yellow">要確認</span></div>
+        <div class="stat-card"><div class="stat-value" id="d-closures">0</div><div class="stat-label">今月の定休・半休日数</div><span class="stat-badge badge-red">店舗合計</span></div>
+        <div class="stat-card"><div class="stat-value" id="d-paid">0</div><div class="stat-label">今月の有給取得</div><span class="stat-badge badge-teal">日数</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="card">
+          <div class="card-title">今月のスタッフ別 勤務時間</div>
+          <div id="d-hours"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">今月の店舗別 定休・半休カレンダー</div>
+          <div id="d-closures-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly shift -->
+    <div class="page" id="page-monthly">
+      <div class="section-header">
+        <div class="section-title">月次シフト表</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-pink btn-sm" onclick="initAllWorking()">🔄 全員出勤で初期化</button>
+          <button class="btn btn-primary btn-sm" onclick="autoFillMonth()">⚡ 自動最適化</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportExcel()">📥 Excel出力</button>
+        </div>
+      </div>
+      <div id="init-banner-monthly"></div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="cal-wrap" id="monthly-grid"></div>
+      </div>
+      <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--muted);align-items:center">
+        <span style="color:var(--red)">■ 全日定休</span>
+        <span style="color:var(--yellow)">■ 半休（午前 or 午後）</span>
+        <span style="color:var(--muted)">セルをクリックでシフト変更</span>
+      </div>
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px" id="shift-legend"></div>
+    </div>
+
+    <!-- Weekly -->
+    <div class="page" id="page-weekly">
+      <div class="section-header">
+        <div class="section-title">週次シフト表</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-secondary btn-sm" onclick="changeWeek(-1)">◀ 前週</button>
+          <div class="month-label" id="week-label" style="min-width:170px"></div>
+          <button class="btn btn-secondary btn-sm" onclick="changeWeek(1)">次週 ▶</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-wrap" id="weekly-grid"></div>
+      </div>
+    </div>
+
+    <!-- Store closure settings -->
+    <div class="page" id="page-closure">
+      <div class="section-header">
+        <div class="section-title">定休日・半休設定</div>
+        <div style="font-size:12px;color:var(--muted)">店舗を選んで日付をクリックして設定</div>
+      </div>
+      <!-- Store selector -->
+      <div class="store-tabs" id="closure-store-tabs"></div>
+      <!-- Legend -->
+      <div style="display:flex;gap:10px;margin-bottom:14px;font-size:11px;flex-wrap:wrap">
+        <span><span style="display:inline-block;width:12px;height:12px;background:rgba(239,68,68,.3);border-radius:2px;vertical-align:middle;margin-right:4px"></span>全日定休</span>
+        <span><span style="display:inline-block;width:12px;height:6px;background:rgba(245,158,11,.3);border-radius:2px;vertical-align:middle;margin-right:4px;margin-top:3px"></span>午前半休（午後のみ営業）</span>
+        <span><span style="display:inline-block;width:12px;height:6px;background:rgba(245,158,11,.3);border-radius:2px;vertical-align:middle;margin-right:4px"></span>午後半休（午前のみ営業）</span>
+        <span style="color:var(--muted)">クリックで切り替え → 右クリックで解除</span>
+      </div>
+      <div class="card">
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:8px">
+          <div style="text-align:center;font-size:10px;color:var(--red);padding:4px">日</div>
+          <div style="text-align:center;font-size:10px;color:var(--muted);padding:4px">月</div>
+          <div style="text-align:center;font-size:10px;color:var(--muted);padding:4px">火</div>
+          <div style="text-align:center;font-size:10px;color:var(--muted);padding:4px">水</div>
+          <div style="text-align:center;font-size:10px;color:var(--muted);padding:4px">木</div>
+          <div style="text-align:center;font-size:10px;color:var(--muted);padding:4px">金</div>
+          <div style="text-align:center;font-size:10px;color:var(--accent);padding:4px">土</div>
+        </div>
+        <div class="closure-cal" id="closure-cal"></div>
+      </div>
+      <div style="margin-top:14px" id="closure-summary"></div>
+    </div>
+
+    <!-- Store view -->
+    <div class="page" id="page-store">
+      <div class="section-header">
+        <div class="section-title">店舗別出勤一覧</div>
+      </div>
+      <div class="store-grid" id="store-grid"></div>
+    </div>
+
+    <!-- Requests -->
+    <div class="page" id="page-requests">
+      <div class="section-header">
+        <div class="section-title">希望・有給・振替</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-teal btn-sm" onclick="openModal('modal-special')">＋ 有給・振替申請</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-request')">＋ シフト希望</button>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="filterReq('all',this)">すべて</button>
+        <button class="tab" onclick="filterReq('pending',this)">承認待ち</button>
+        <button class="tab" onclick="filterReq('approved',this)">承認済み</button>
+        <button class="tab" onclick="filterReq('rejected',this)">却下</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>スタッフ</th><th>日付</th><th>種別</th><th>内容</th><th>備考</th><th>ステータス</th><th></th></tr></thead>
+            <tbody id="req-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Staff -->
+    <div class="page" id="page-staff">
+      <div class="section-header">
+        <div class="section-title">スタッフ管理</div>
+        <button class="btn btn-primary" onclick="openModal('modal-staff')">＋ スタッフ追加</button>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">デフォルトシフト設定（全員出勤初期化時に使用）</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>スタッフ</th><th>デフォルトシフト（平日）</th><th>デフォルトシフト（土曜）</th><th>デフォルトシフト（日曜）</th></tr></thead>
+            <tbody id="default-shift-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">スタッフ一覧</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>氏名</th><th>雇用形態</th><th>月上限(h)</th><th>週上限(h)</th><th>有給残</th><th>振替残</th><th></th></tr></thead>
+            <tbody id="staff-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- Modals -->
+<div class="overlay" id="modal-request">
+  <div class="modal">
+    <div class="modal-title">シフト希望を入力</div>
+    <div class="form-group"><label>スタッフ</label><select id="r-staff"></select></div>
+    <div class="grid-2">
+      <div class="form-group"><label>日付</label><input id="r-date" type="date"></div>
+      <div class="form-group"><label>シフト区分</label><select id="r-shift"></select></div>
+    </div>
+    <div class="form-group"><label>備考</label><textarea id="r-note" rows="2"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-request')">キャンセル</button>
+      <button class="btn btn-primary" onclick="addRequest()">送信</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-special">
+  <div class="modal">
+    <div class="modal-title">有給・振替申請</div>
+    <div class="form-group"><label>スタッフ</label><select id="sp-staff"></select></div>
+    <div class="form-group"><label>種別</label>
+      <select id="sp-type">
+        <option value="有給">有給休暇</option>
+        <option value="振替">振替休日</option>
+        <option value="振替出勤">振替出勤（休日出勤分）</option>
+      </select>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>日付</label><input id="sp-date" type="date"></div>
+      <div class="form-group"><label>振替元日付（振替の場合）</label><input id="sp-ref-date" type="date"></div>
+    </div>
+    <div class="form-group"><label>備考</label><textarea id="sp-note" rows="2"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-special')">キャンセル</button>
+      <button class="btn btn-teal" onclick="addSpecial()">申請</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-cell">
+  <div class="modal">
+    <div class="modal-title" id="cell-title">シフト変更</div>
+    <div id="cell-closure-warn" style="display:none;border-radius:7px;padding:10px;font-size:12px;margin-bottom:10px;border:1px solid transparent"></div>
+    <div class="form-group"><label>シフト区分</label><select id="cell-shift"></select></div>
+    <div id="cell-live-warn" style="display:none;border-radius:7px;padding:8px 10px;font-size:11px;margin-top:8px;border:1px solid transparent"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-cell')">キャンセル</button>
+      <button class="btn btn-danger btn-sm" onclick="clearCell()">クリア</button>
+      <button class="btn btn-primary" onclick="saveCell()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-staff">
+  <div class="modal">
+    <div class="modal-title">スタッフ追加</div>
+    <div class="form-group"><label>氏名</label><input id="sf-name" placeholder="例：田中 花子"></div>
+    <div class="grid-2">
+      <div class="form-group"><label>雇用形態</label>
+        <select id="sf-role">
+          <option value="正社員">正社員</option>
+          <option value="短時間正社員">短時間正社員</option>
+          <option value="パートタイム">パートタイム</option>
+        </select>
+      </div>
+      <div class="form-group"><label>月上限時間</label><input id="sf-hours" type="number" value="160"></div>
+    </div>
+    <div class="form-group"><label>週上限時間</label><input id="sf-week-hours" type="number" value="40" placeholder="例：40"></div>
+    <div class="grid-2">
+      <div class="form-group"><label>有給残日数</label><input id="sf-paid" type="number" value="10"></div>
+      <div class="form-group"><label>振替残日数</label><input id="sf-sub" type="number" value="0"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-staff')">キャンセル</button>
+      <button class="btn btn-primary" onclick="addStaff()">追加</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== SHIFT TYPES =====
+const SHIFT_TYPES = [
+  {key:'倉敷店A',label:'倉敷店A',note:'平日',store:'倉敷',cls:'s-倉敷A'},
+  {key:'倉敷店B',label:'倉敷店B',note:'土日',store:'倉敷',cls:'s-倉敷B'},
+  {key:'倉敷店C',label:'倉敷店C',note:'平日',store:'倉敷',cls:'s-倉敷C'},
+  {key:'倉敷店D',label:'倉敷店D',note:'平日',store:'倉敷',cls:'s-倉敷D'},
+  {key:'倉敷店E',label:'倉敷店E',note:'土曜日',store:'倉敷',cls:'s-倉敷E'},
+  {key:'倉敷店F',label:'倉敷店F',note:'平日',store:'倉敷',cls:'s-倉敷F'},
+  {key:'岡山店A',label:'岡山店A',note:'月木金',store:'岡山',cls:'s-岡山A'},
+  {key:'岡山店B',label:'岡山店B',note:'火曜日',store:'岡山',cls:'s-岡山B'},
+  {key:'岡山店C',label:'岡山店C',note:'水曜日',store:'岡山',cls:'s-岡山C'},
+  {key:'岡山店D',label:'岡山店D',note:'土日',store:'岡山',cls:'s-岡山D'},
+  {key:'岡山店E',label:'岡山店E',note:'月木金',store:'岡山',cls:'s-岡山E'},
+  {key:'岡山店F',label:'岡山店F',note:'月木金',store:'岡山',cls:'s-岡山F'},
+  {key:'本社A',label:'本社A',note:'平日',store:'本社',cls:'s-本社A'},
+  {key:'本社B',label:'本社B',note:'6時間',store:'本社',cls:'s-本社B'},
+  {key:'P/A①',label:'P/A①',note:'月火木金',store:'本社',cls:'s-PA1'},
+  {key:'P/A②',label:'P/A②',note:'水曜日',store:'本社',cls:'s-PA2'},
+  {key:'有給',label:'有給',note:'',store:'',cls:'s-有給'},
+  {key:'振替',label:'振替',note:'',store:'',cls:'s-振替'},
+  {key:'休日',label:'休日',note:'',store:'',cls:'s-休日'},
+];
+const SHIFT_HOURS = {
+  '倉敷店A':9.5,'倉敷店B':9.5,'倉敷店C':5,'倉敷店D':5.5,'倉敷店E':5.5,'倉敷店F':7.5,
+  '岡山店A':7.5,'岡山店B':9,'岡山店C':8,'岡山店D':8.5,'岡山店E':7.5,'岡山店F':3.5,
+  '本社A':8,'本社B':6,'P/A①':5.5,'P/A②':4,'有給':0,'振替':0,'休日':0
+};
+const STORES = ['倉敷','岡山','本社'];
+const STORE_COLORS = {'倉敷':'#4f8cff','岡山':'#a259ff','本社':'#14b8a6'};
+const DOW = ['日','月','火','水','木','金','土'];
+
+// ===== STATE =====
+const today = new Date();
+let currentYear = today.getFullYear();
+let currentMonth = today.getMonth();
+let currentWeekOffset = 0;
+let currentPage = 'dashboard';
+let cellEditing = {staffId:null,date:null};
+let reqFilter = 'all';
+let activeClosureStore = '倉敷';
+
+const state = {
+  staff: [
+    {id:1,name:'三宅',role:'正社員',maxHours:180,maxWeekHours:45,paidLeave:10,subLeave:0,
+     defaultShift:{weekday:'本社A',saturday:'休日',sunday:'休日'}},
+    {id:2,name:'山下',role:'正社員',maxHours:160,maxWeekHours:40,paidLeave:8,subLeave:1,
+     defaultShift:{weekday:'岡山店A',saturday:'岡山店D',sunday:'休日'}},
+    {id:3,name:'高橋',role:'正社員',maxHours:160,maxWeekHours:40,paidLeave:12,subLeave:0,
+     defaultShift:{weekday:'倉敷店F',saturday:'倉敷店B',sunday:'休日'}},
+    {id:4,name:'田尾',role:'パートタイム',maxHours:80,maxWeekHours:20,paidLeave:5,subLeave:2,
+     defaultShift:{weekday:'倉敷店D',saturday:'休日',sunday:'休日'}},
+  ],
+  schedule: {},
+  // Store closures: key = `store_YYYY-MM-DD`, value = 'closed'|'half-am'|'half-pm'
+  closures: {},
+  requests: [
+    {id:1,staffId:2,date:'2026-04-05',type:'request',shift:'岡山店A',note:'',status:'pending',updatedAt:'2026-03-14'},
+    {id:2,staffId:3,date:'2026-04-10',type:'有給',shift:'有給',note:'家庭の事情',status:'pending',updatedAt:'2026-03-14'},
+    {id:3,staffId:4,date:'2026-04-15',type:'振替',shift:'振替',refDate:'2026-04-12',note:'',status:'approved',updatedAt:'2026-03-13'},
+  ],
+  nextStaffId: 5,
+  nextReqId: 4,
+  initialized: {}, // `YYYY-MM` -> bool
+};
+
+// Sample closures for April 2026
+state.closures['倉敷_2026-04-07'] = 'closed';
+state.closures['倉敷_2026-04-14'] = 'closed';
+state.closures['岡山_2026-04-07'] = 'half-am';
+state.closures['岡山_2026-04-21'] = 'closed';
+state.closures['本社_2026-04-29'] = 'closed';
+state.closures['本社_2026-04-30'] = 'closed';
+
+// Sample schedule
+const ap = '2026-04-';
+[
+  [1,'01','倉敷店A'],[1,'02','本社A'],[1,'03','本社A'],[1,'04','倉敷店B'],[1,'08','本社A'],
+  [2,'01','岡山店C'],[2,'03','岡山店D'],[2,'04','岡山店D'],[2,'08','岡山店A'],
+  [3,'01','倉敷店F'],[3,'03','倉敷店B'],[3,'04','倉敷店B'],[3,'08','倉敷店F'],
+  [4,'01','倉敷店D'],[4,'03','休日'],[4,'04','休日'],[4,'08','倉敷店D'],
+].forEach(([sid,day,sh])=>{ state.schedule[`${sid}_${ap}${day}`]=sh; });
+
+// ===== HELPERS =====
+function dStr(d){return d.toISOString().slice(0,10)}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r}
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate()}
+function mkDate(y,m,d){return new Date(y,m,d)}
+function padZ(n){return String(n).padStart(2,'0')}
+function dsOf(y,m,d){return `${y}-${padZ(m+1)}-${padZ(d)}`}
+function shiftInfo(key){return SHIFT_TYPES.find(s=>s.key===key)||{key,label:key,cls:'s-休日',store:''}}
+function shiftCls(key){return shiftInfo(key)?.cls||'s-休日'}
+function shiftChip(key){
+  if(!key) return `<span class="s-empty">—</span>`;
+  const i=shiftInfo(key);
+  return `<span class="shift-chip ${i.cls}">${i.label}</span>`;
+}
+function shortLabel(key){
+  if(!key) return '';
+  return key.replace('倉敷店','倉').replace('岡山店','岡').replace('本社','社').replace('P/A','P');
+}
+function getClosureForDate(store, ds){
+  return state.closures[`${store}_${ds}`]||null;
+}
+function getAnyClosureForDate(ds){
+  const results=[];
+  STORES.forEach(s=>{const c=getClosureForDate(s,ds);if(c) results.push({store:s,type:c});});
+  return results;
+}
+function isStoreShift(shiftKey, store){
+  return shiftInfo(shiftKey)?.store===store;
+}
+function showToast(msg,type='success'){
+  const el=document.getElementById('toast');
+  el.textContent=(type==='success'?'✅ ':'❌ ')+msg;
+  el.className=`toast show ${type}`;
+  setTimeout(()=>el.className='toast',2800);
+}
+function openModal(id){
+  if(id==='modal-request'||id==='modal-special') populateModalSelects();
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+function populateModalSelects(){
+  const staffOpts=state.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  ['r-staff','sp-staff'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=staffOpts});
+  const shiftOpts=SHIFT_TYPES.map(s=>`<option value="${s.key}">${s.label}${s.note?' ('+s.note+')':''}</option>`).join('');
+  const rs=document.getElementById('r-shift');if(rs)rs.innerHTML=shiftOpts;
+}
+function updateBadges(){
+  const cnt=state.requests.filter(r=>r.status==='pending').length;
+  const el=document.getElementById('badge-req');
+  el.style.display=cnt>0?'inline':'none';
+  el.textContent=cnt;
+  document.getElementById('d-pending').textContent=cnt;
+}
+function staffHoursMonth(staffId,y,m){
+  let total=0;
+  const days=daysInMonth(y,m);
+  for(let d=1;d<=days;d++){
+    const sh=state.schedule[`${staffId}_${dsOf(y,m,d)}`];
+    if(sh) total+=SHIFT_HOURS[sh]||0;
+  }
+  return Math.round(total*10)/10;
+}
+function staffHoursWeek(staffId,weekStartDate){
+  let total=0;
+  for(let i=0;i<7;i++){
+    const ds=dStr(addDays(weekStartDate,i));
+    const sh=state.schedule[`${staffId}_${ds}`];
+    if(sh) total+=SHIFT_HOURS[sh]||0;
+  }
+  return Math.round(total*10)/10;
+}
+function weekStartForDate(ds){
+  const d=new Date(ds);
+  const dow=d.getDay();
+  const mon=new Date(d);
+  mon.setDate(d.getDate()-(dow===0?6:dow-1));
+  mon.setHours(0,0,0,0);
+  return mon;
+}
+function checkLimits(staffId,date,newShiftKey){
+  const s=state.staff.find(x=>x.id===staffId);
+  if(!s) return null;
+  const d=new Date(date);
+  const y=d.getFullYear(),m=d.getMonth();
+  const oldSh=state.schedule[`${staffId}_${date}`];
+  const oldH=SHIFT_HOURS[oldSh]||0;
+  const addH=(SHIFT_HOURS[newShiftKey]||0)-oldH;
+  const monthH=Math.round((staffHoursMonth(staffId,y,m)+addH)*10)/10;
+  const wStart=weekStartForDate(date);
+  const weekH=Math.round((staffHoursWeek(staffId,wStart)+addH)*10)/10;
+  return{
+    monthH,weekH,addH,
+    monthOver:monthH>s.maxHours,
+    weekOver:weekH>(s.maxWeekHours||40),
+    monthLimit:s.maxHours,
+    weekLimit:s.maxWeekHours||40,
+  };
+}
+function hoursColor(h,limit){const p=h/limit*100;return p>100?'var(--red)':p>90?'var(--yellow)':'var(--muted)';}
+function hoursBarCls(h,limit){const p=h/limit*100;return p>100?'hbar-over':p>90?'hbar-warn':'hbar-ok';}
+function monthBadgeCls(h,limit){const p=h/limit*100;return p>100?'badge-red':p>90?'badge-yellow':'badge-blue';}
+
+// ===== NAVIGATION =====
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelector(`[onclick="showPage('${id}')"]`).classList.add('active');
+  const titles={dashboard:'ダッシュボード',monthly:'月次シフト表',weekly:'週次シフト表',
+    closure:'定休日・半休設定',store:'店舗別出勤一覧',requests:'希望・有給・振替',staff:'スタッフ管理'};
+  document.getElementById('page-title').textContent=titles[id];
+  currentPage=id;
+  renderCurrentPage();
+}
+function renderCurrentPage(){
+  updateMonthLabel();
+  updateBadges();
+  const map={dashboard:renderDashboard,monthly:renderMonthly,weekly:renderWeekly,
+    closure:renderClosure,store:renderStore,requests:renderRequests,staff:renderStaff};
+  if(map[currentPage]) map[currentPage]();
+}
+function changeMonth(dir){
+  currentMonth+=dir;
+  if(currentMonth>11){currentMonth=0;currentYear++;}
+  if(currentMonth<0){currentMonth=11;currentYear--;}
+  renderCurrentPage();
+}
+function changeWeek(dir){currentWeekOffset+=dir;renderWeekly()}
+function updateMonthLabel(){
+  document.getElementById('month-label').textContent=`${currentYear}年${currentMonth+1}月`;
+}
+
+// ===== INIT ALL WORKING =====
+function initAllWorking(){
+  const y=currentYear,m=currentMonth;
+  const mk=`${y}-${padZ(m+1)}`;
+  const days=daysInMonth(y,m);
+  let overwritten=0;
+
+  if(state.initialized[mk]){
+    if(!confirm(`${y}年${m+1}月は既に初期化済みです。上書きしますか？\n（定休日・半休日・承認済み希望は保持されます）`)) return;
+  }
+
+  state.staff.forEach(s=>{
+    for(let d=1;d<=days;d++){
+      const ds=dsOf(y,m,d);
+      const k=`${s.id}_${ds}`;
+      // Don't overwrite approved requests
+      const approved=state.requests.find(r=>r.staffId===s.id&&r.date===ds&&r.status==='approved');
+      if(approved) return;
+
+      const date=mkDate(y,m,d);
+      const dow=date.getDay();
+      let defaultSh;
+      if(dow===0) defaultSh=s.defaultShift.sunday;
+      else if(dow===6) defaultSh=s.defaultShift.saturday;
+      else defaultSh=s.defaultShift.weekday;
+
+      // Check if store is closed on this day
+      if(defaultSh&&defaultSh!=='休日'&&defaultSh!=='有給'&&defaultSh!=='振替'){
+        const store=shiftInfo(defaultSh)?.store;
+        if(store){
+          const closure=getClosureForDate(store,ds);
+          if(closure==='closed') defaultSh='休日'; // store closed → off
+        }
+      }
+
+      state.schedule[k]=defaultSh||'休日';
+      overwritten++;
+    }
+  });
+  state.initialized[mk]=true;
+  showToast(`${y}年${m+1}月を全員出勤で初期化しました（${state.staff.length}名 × ${days}日）`);
+  stateMutated();
+  renderCurrentPage();
+}
+
+// ===== DASHBOARD =====
+function renderDashboard(){
+  const y=currentYear,m=currentMonth;
+  const days=daysInMonth(y,m);
+  let totalShifts=0,totalPaid=0;
+  state.staff.forEach(s=>{
+    for(let d=1;d<=days;d++){
+      const sh=state.schedule[`${s.id}_${dsOf(y,m,d)}`];
+      if(sh&&sh!=='休日') totalShifts++;
+      if(sh==='有給') totalPaid++;
+    }
+  });
+  document.getElementById('d-shifts').textContent=totalShifts;
+  document.getElementById('d-paid').textContent=totalPaid;
+  document.getElementById('d-staff').textContent=state.staff.length;
+
+  // Count closures
+  let totalClosures=0;
+  for(const key in state.closures){
+    if(key.includes(`_${y}-${padZ(m+1)}`)) totalClosures++;
+  }
+  document.getElementById('d-closures').textContent=totalClosures;
+
+  // Hours chart
+  const wStart=getWeekStart(0);
+  document.getElementById('d-hours').innerHTML=state.staff.map(s=>{
+    const mH=staffHoursMonth(s.id,y,m);
+    const wH=staffHoursWeek(s.id,wStart);
+    const mPct=Math.min(100,Math.round(mH/s.maxHours*100));
+    const wPct=Math.min(100,Math.round(wH/(s.maxWeekHours||40)*100));
+    const mOver=mH>s.maxHours, wOver=wH>(s.maxWeekHours||40);
+    return `<div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
+        <span style="font-weight:500">${s.name}</span>
+        ${mOver?`<span style="font-size:10px;color:var(--red);font-weight:700">⚠️ 月超過</span>`:wOver?`<span style="font-size:10px;color:var(--yellow)">⚠️ 週超過</span>`:''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">月間 <span style="color:${mOver?'var(--red)':mPct>90?'var(--yellow)':'var(--text)'};font-family:'Space Mono',monospace">${mH}/${s.maxHours}h</span></div>
+          <div class="hbar-wrap"><div class="hbar ${hoursBarCls(mH,s.maxHours)}" style="width:${mPct}%"></div></div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">今週 <span style="color:${wOver?'var(--red)':wPct>90?'var(--yellow)':'var(--text)'};font-family:'Space Mono',monospace">${wH}/${s.maxWeekHours||40}h</span></div>
+          <div class="hbar-wrap"><div class="hbar ${hoursBarCls(wH,s.maxWeekHours||40)}" style="width:${wPct}%"></div></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Closures summary
+  const cList=document.getElementById('d-closures-list');
+  const closureItems=[];
+  for(const key in state.closures){
+    const [store,ds]=key.split('_');
+    if(ds.startsWith(`${y}-${padZ(m+1)}`)){
+      const d=parseInt(ds.split('-')[2]);
+      const date=mkDate(y,m,d);
+      closureItems.push({store,ds,d,dow:DOW[date.getDay()],type:state.closures[key]});
+    }
+  }
+  closureItems.sort((a,b)=>a.ds.localeCompare(b.ds));
+  if(closureItems.length===0){
+    cList.innerHTML=`<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px">定休・半休の設定なし</div>`;
+  } else {
+    cList.innerHTML=closureItems.map(c=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(37,45,69,.4)">
+        <span style="font-family:'Space Mono',monospace;font-size:11px;min-width:60px">${c.d}日(${c.dow})</span>
+        <span style="font-size:11px;font-weight:600;color:${STORE_COLORS[c.store]||'#fff'}">${c.store}</span>
+        <span class="stat-badge ${c.type==='closed'?'badge-red':'badge-yellow'}">${c.type==='closed'?'全日定休':c.type==='half-am'?'午前半休':'午後半休'}</span>
+      </div>`).join('');
+  }
+}
+
+// ===== MONTHLY GRID =====
+function renderMonthly(){
+  const y=currentYear,m=currentMonth;
+  const days=daysInMonth(y,m);
+  const mk=`${y}-${padZ(m+1)}`;
+
+  // Init banner
+  const banner=document.getElementById('init-banner-monthly');
+  if(!state.initialized[mk]){
+    banner.innerHTML=`<div class="init-banner">
+      <div>
+        <div class="init-banner-text">📋 ${y}年${m+1}月はまだ初期化されていません</div>
+        <div class="init-banner-sub">「全員出勤で初期化」ボタンを押すと、各スタッフのデフォルトシフトで一括設定できます</div>
+      </div>
+      <button class="btn btn-pink" onclick="initAllWorking()">🔄 全員出勤で初期化</button>
+    </div>`;
+  } else {
+    banner.innerHTML='';
+  }
+
+  // Build grid
+  const firstDow=mkDate(y,m,1).getDay();
+  let html=`<table class="cal-table" style="min-width:${Math.max(900,days*55+120)}px;width:100%">
+    <thead><tr><th style="text-align:left;padding:7px 10px;min-width:65px">スタッフ</th>`;
+  for(let d=1;d<=days;d++){
+    const date=mkDate(y,m,d);
+    const dow=date.getDay();
+    const isS=dow===6,isH=dow===0;
+    // Check if any store has closure
+    const ds=dsOf(y,m,d);
+    const closures=getAnyClosureForDate(ds);
+    const hasClosed=closures.some(c=>c.type==='closed');
+    const hasHalf=closures.some(c=>c.type==='half-am'||c.type==='half-pm');
+    const closureIndicator=hasClosed?'<div style="width:6px;height:6px;border-radius:50%;background:var(--red);margin:0 auto;margin-top:2px"></div>':
+      hasHalf?'<div style="width:6px;height:6px;border-radius:50%;background:var(--yellow);margin:0 auto;margin-top:2px"></div>':'';
+    html+=`<th style="color:${isH?'var(--red)':isS?'var(--accent)':'var(--muted)'}">${d}<br>${DOW[dow]}${closureIndicator}</th>`;
+  }
+  html+=`<th>合計</th></tr></thead><tbody>`;
+
+  state.staff.forEach(s=>{
+    let monthH=0;
+    html+=`<tr><td class="cal-name-col">${s.name}</td>`;
+    for(let d=1;d<=days;d++){
+      const ds=dsOf(y,m,d);
+      const date=mkDate(y,m,d);
+      const dow=date.getDay();
+      const sh=state.schedule[`${s.id}_${ds}`];
+      monthH+=SHIFT_HOURS[sh]||0;
+      const isSat=dow===6,isSun=dow===0;
+      // Closure for this staff's store
+      const staffStore=sh?shiftInfo(sh)?.store:null;
+      const closure=staffStore?getClosureForDate(staffStore,ds):null;
+      const defaultStore=s.defaultShift?.weekday?shiftInfo(s.defaultShift.weekday)?.store:null;
+      const anyClosure=getAnyClosureForDate(ds);
+      const cellClosed=anyClosure.length>0&&sh&&sh!=='休日'&&sh!=='有給'&&sh!=='振替'&&closure==='closed';
+      let extraClass='';
+      if(isSun) extraClass+=' sun';
+      if(isSat) extraClass+=' sat';
+      html+=`<td class="cal-cell${extraClass}" onclick="openCellEditor(${s.id},'${ds}','${s.name}')">
+        ${sh?`<span class="shift-chip ${shiftCls(sh)}" style="${cellClosed?'opacity:.4;text-decoration:line-through':''}">${shortLabel(sh)}</span>`:'<span class="s-empty" style="font-size:9px">—</span>'}
+      </td>`;
+    }
+    const mOver=monthH>s.maxHours;
+    const mWarn=!mOver&&monthH/s.maxHours>0.9;
+    const cls=mOver?'badge-red':mWarn?'badge-yellow':'badge-blue';
+    const mBg=mOver?'rgba(239,68,68,.12)':mWarn?'rgba(245,158,11,.08)':'var(--surface2)';
+    html+=`<td style="text-align:center;padding:5px 6px;background:${mBg};white-space:nowrap">
+      <span class="stat-badge ${cls}" style="font-family:'Space Mono',monospace">${monthH}h</span>
+      <div style="font-size:9px;color:var(--muted)">/${s.maxHours}h</div>
+      ${mOver?`<div style="font-size:9px;color:var(--red);font-weight:700">⚠️超過</div>`:''}
+    </td></tr>`;
+  });
+
+  // Summary row
+  html+=`<tr class="summary-row"><td class="cal-name-col" style="font-size:11px;color:var(--muted)">出勤数</td>`;
+  for(let d=1;d<=days;d++){
+    const ds=dsOf(y,m,d);
+    const cnt=state.staff.filter(s=>{const sh=state.schedule[`${s.id}_${ds}`];return sh&&sh!=='休日'&&sh!=='有給'&&sh!=='振替';}).length;
+    html+=`<td style="text-align:center;padding:4px;color:${cnt===0?'var(--muted)':'var(--text)'}">${cnt||'—'}</td>`;
+  }
+  html+=`<td></td></tr></tbody></table>`;
+  document.getElementById('monthly-grid').innerHTML=html;
+
+  // Legend
+  const leg=document.getElementById('shift-legend');
+  leg.innerHTML=SHIFT_TYPES.filter(s=>!['有給','振替','休日'].includes(s.key)).map(s=>
+    `<span class="shift-chip ${s.cls}" style="font-size:11px">${s.label}${s.note?' ('+s.note+')':''}</span>`
+  ).join('');
+}
+
+// ===== WEEKLY =====
+function getWeekStart(offset){
+  const t=new Date();
+  const day=t.getDay();
+  const mon=new Date(t);
+  mon.setDate(t.getDate()-(day===0?6:day-1)+offset*7);
+  mon.setHours(0,0,0,0);
+  return mon;
+}
+function renderWeekly(){
+  const ws=getWeekStart(currentWeekOffset);
+  const we=addDays(ws,6);
+  document.getElementById('week-label').textContent=
+    `${ws.getMonth()+1}/${ws.getDate()} 〜 ${we.getMonth()+1}/${we.getDate()}`;
+  const days=Array.from({length:7},(_,i)=>addDays(ws,i));
+
+  let html=`<table style="border-collapse:collapse;width:100%;font-size:12px">
+    <thead><tr><th style="text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);background:var(--surface2)">スタッフ</th>`;
+  days.forEach(d=>{
+    const isSat=d.getDay()===6,isSun=d.getDay()===0;
+    const ds=dStr(d);
+    const closures=getAnyClosureForDate(ds);
+    const indicator=closures.length>0?`<span style="color:${closures[0].type==='closed'?'var(--red)':'var(--yellow)'}"> ●</span>`:'';
+    html+=`<th style="border-bottom:1px solid var(--border);padding:7px 8px;text-align:center;background:var(--surface2);color:${isSun?'var(--red)':isSat?'var(--accent)':'var(--muted)'}">${d.getMonth()+1}/${d.getDate()}<br>${DOW[d.getDay()]}${indicator}</th>`;
+  });
+  html+=`<th style="border-bottom:1px solid var(--border);padding:7px;text-align:center;background:var(--surface2)">週計</th></tr></thead><tbody>`;
+  state.staff.forEach(s=>{
+    const wLimit=s.maxWeekHours||40;
+    let runH=0;
+    // pre-calculate cumulative hours per day for this week
+    const dayH=days.map(d=>{
+      const sh=state.schedule[`${s.id}_${dStr(d)}`];
+      return SHIFT_HOURS[sh]||0;
+    });
+    const weekH=Math.round(dayH.reduce((a,b)=>a+b,0)*10)/10;
+    const weekOver=weekH>wLimit;
+    const weekWarn=!weekOver&&weekH/wLimit>0.9;
+    html+=`<tr><td style="padding:9px 12px;font-weight:500;background:var(--surface2)">${s.name}`;
+    // mini week bar under name
+    const wPct=Math.min(100,Math.round(weekH/wLimit*100));
+    html+=`<div class="hbar-wrap" style="margin-top:4px"><div class="hbar ${hoursBarCls(weekH,wLimit)}" style="width:${wPct}%"></div></div>`;
+    html+=`</td>`;
+    let cumH=0;
+    days.forEach((d,i)=>{
+      const ds=dStr(d);
+      const sh=state.schedule[`${s.id}_${ds}`];
+      cumH=Math.round((cumH+(SHIFT_HOURS[sh]||0))*10)/10;
+      const isSat=d.getDay()===6,isSun=d.getDay()===0;
+      const dayOver=cumH>wLimit;
+      const bg=dayOver?'rgba(239,68,68,.12)':isSun?'rgba(239,68,68,.03)':isSat?'rgba(79,140,255,.03)':'transparent';
+      html+=`<td style="text-align:center;padding:7px;border-left:1px solid var(--border);cursor:pointer;background:${bg};${dayOver?'border-left:2px solid var(--red)':''}" onclick="openCellEditor(${s.id},'${ds}','${s.name}')">
+        ${shiftChip(sh)}
+        ${dayOver?`<div style="font-size:9px;color:var(--red);margin-top:1px">累計${cumH}h</div>`:''}
+      </td>`;
+    });
+    const weekCol=weekOver?'var(--red)':weekWarn?'var(--yellow)':'var(--muted)';
+    const weekBg=weekOver?'rgba(239,68,68,.15)':weekWarn?'rgba(245,158,11,.1)':'var(--surface2)';
+    html+=`<td style="text-align:center;padding:7px;background:${weekBg};white-space:nowrap">
+      <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:${weekCol}">${weekH}h</span>
+      <div style="font-size:9px;color:var(--muted)">上限${wLimit}h</div>
+      ${weekOver?`<div style="font-size:9px;color:var(--red);font-weight:700">⚠️ +${Math.round((weekH-wLimit)*10)/10}h超過</div>`:''}
+    </td></tr>`;
+  });
+  html+=`</tbody></table>`;
+  document.getElementById('weekly-grid').innerHTML=html;
+}
+
+// ===== CELL EDITOR =====
+function openCellEditor(staffId,date,staffName){
+  cellEditing={staffId,date};
+  document.getElementById('cell-title').textContent=`${staffName} / ${date}`;
+  const current=state.schedule[`${staffId}_${date}`]||'';
+  const s=state.staff.find(x=>x.id===staffId);
+  const sel=document.getElementById('cell-shift');
+
+  // Build options with hours hint
+  const d=new Date(date);
+  const y=d.getFullYear(),mo=d.getMonth();
+  const wStart=weekStartForDate(date);
+  const curMonthH=staffHoursMonth(staffId,y,mo);
+  const curWeekH=staffHoursWeek(staffId,wStart);
+  const curShH=SHIFT_HOURS[current]||0;
+  // Net hours already booked excluding current cell
+  const baseMonthH=Math.round((curMonthH-curShH)*10)/10;
+  const baseWeekH=Math.round((curWeekH-curShH)*10)/10;
+
+  sel.innerHTML=`<option value="">— 未設定 —</option>`+
+    SHIFT_TYPES.map(sh=>{
+      const h=SHIFT_HOURS[sh.key]||0;
+      const newMH=Math.round((baseMonthH+h)*10)/10;
+      const newWH=Math.round((baseWeekH+h)*10)/10;
+      const mOver=s&&newMH>s.maxHours;
+      const wOver=s&&newWH>(s.maxWeekHours||40);
+      const overTag=mOver&&wOver?' ⚠️週・月超過':mOver?' ⚠️月超過':wOver?' ⚠️週超過':'';
+      return `<option value="${sh.key}"${sh.key===current?' selected':''}
+        style="${mOver||wOver?'color:#f87171':''}">${sh.label}${sh.note?' ('+sh.note+')':''}${h?'  '+h+'h':''}${overTag}</option>`;
+    }).join('');
+
+  // Show current hours info
+  const warn=document.getElementById('cell-closure-warn');
+  let warnHtml='';
+  const closures=getAnyClosureForDate(date);
+  if(closures.length>0){
+    warnHtml+=`<div style="margin-bottom:6px">⚠️ 定休・半休あり：`+
+      closures.map(c=>`<strong>${c.store}</strong> ${c.type==='closed'?'全日定休':c.type==='half-am'?'午前半休':'午後半休'}`).join(' / ')+'</div>';
+  }
+  if(s){
+    const mPct=Math.round(baseMonthH/s.maxHours*100);
+    const wPct=Math.round(baseWeekH/(s.maxWeekHours||40)*100);
+    const mCol=mPct>100?'var(--red)':mPct>90?'var(--yellow)':'var(--green)';
+    const wCol=wPct>100?'var(--red)':wPct>90?'var(--yellow)':'var(--green)';
+    warnHtml+=`<div style="font-size:11px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div>月間: <strong style="color:${mCol}">${baseMonthH}h</strong> / ${s.maxHours}h
+        <div class="hbar-wrap" style="margin-top:3px"><div class="hbar ${hoursBarCls(baseMonthH,s.maxHours)}" style="width:${Math.min(100,mPct)}%"></div></div>
+      </div>
+      <div>週間: <strong style="color:${wCol}">${baseWeekH}h</strong> / ${s.maxWeekHours||40}h
+        <div class="hbar-wrap" style="margin-top:3px"><div class="hbar ${hoursBarCls(baseWeekH,s.maxWeekHours||40)}" style="width:${Math.min(100,wPct)}%"></div></div>
+      </div>
+    </div>`;
+  }
+  if(warnHtml){
+    warn.style.display='block';
+    warn.innerHTML=warnHtml;
+    warn.style.background=closures.length>0?'rgba(239,68,68,.1)':'rgba(79,140,255,.08)';
+    warn.style.borderColor=closures.length>0?'rgba(239,68,68,.3)':'rgba(79,140,255,.25)';
+    warn.style.color=closures.length>0?'var(--red)':'var(--text)';
+  } else {
+    warn.style.display='none';
+  }
+  // Live update on shift select change
+  sel.onchange=()=>updateCellModalLive(staffId,date,s,baseMonthH,baseWeekH);
+  openModal('modal-cell');
+}
+function updateCellModalLive(staffId,date,s,baseMonthH,baseWeekH){
+  if(!s) return;
+  const shKey=document.getElementById('cell-shift').value;
+  const h=SHIFT_HOURS[shKey]||0;
+  const newMH=Math.round((baseMonthH+h)*10)/10;
+  const newWH=Math.round((baseWeekH+h)*10)/10;
+  const mOver=newMH>s.maxHours;
+  const wOver=newWH>(s.maxWeekHours||40);
+  const liveWarn=document.getElementById('cell-live-warn');
+  if(!liveWarn) return;
+  if(mOver||wOver){
+    liveWarn.style.display='block';
+    liveWarn.innerHTML=(mOver?`⚠️ 月間上限超過: ${newMH}h / ${s.maxHours}h<br>`:'')+
+                       (wOver?`⚠️ 週間上限超過: ${newWH}h / ${s.maxWeekHours||40}h`:'');
+  } else {
+    liveWarn.style.display='none';
+    liveWarn.innerHTML=`✅ 月間: ${newMH}h / ${s.maxHours}h　週間: ${newWH}h / ${s.maxWeekHours||40}h`;
+    liveWarn.style.display='block';
+    liveWarn.style.background='rgba(34,197,94,.08)';liveWarn.style.borderColor='rgba(34,197,94,.2)';liveWarn.style.color='var(--green)';
+  }
+  if(mOver||wOver){
+    liveWarn.style.background='rgba(239,68,68,.1)';liveWarn.style.borderColor='rgba(239,68,68,.3)';liveWarn.style.color='var(--red)';
+  }
+}
+function saveCell(){
+  const sh=document.getElementById('cell-shift').value;
+  const k=`${cellEditing.staffId}_${cellEditing.date}`;
+  if(sh){
+    // Check limits before saving
+    const lim=checkLimits(cellEditing.staffId,cellEditing.date,sh);
+    if(lim&&(lim.monthOver||lim.weekOver)){
+      const msgs=[];
+      if(lim.monthOver) msgs.push(`月間上限: ${lim.monthH}h / ${lim.monthLimit}h`);
+      if(lim.weekOver)  msgs.push(`週間上限: ${lim.weekH}h / ${lim.weekLimit}h`);
+      if(!confirm(`⚠️ 上限超過があります\n${msgs.join('\n')}\n\nそれでも保存しますか？`)) return;
+    }
+    state.schedule[k]=sh;
+  } else {
+    delete state.schedule[k];
+  }
+  closeModal('modal-cell');
+  showToast('シフトを更新しました');
+  stateMutated();
+  renderCurrentPage();
+}
+function clearCell(){
+  delete state.schedule[`${cellEditing.staffId}_${cellEditing.date}`];
+  closeModal('modal-cell');showToast('クリアしました');stateMutated();renderCurrentPage();
+}
+
+// ===== CLOSURE SETTINGS =====
+function renderClosure(){
+  // Store tabs
+  const tabsEl=document.getElementById('closure-store-tabs');
+  tabsEl.innerHTML=STORES.map(s=>`
+    <button class="store-tab${s===activeClosureStore?' active':''}"
+      style="${s===activeClosureStore?`background:${STORE_COLORS[s]};`:'color:'+STORE_COLORS[s]+';border-color:'+STORE_COLORS[s]+'44'}"
+      onclick="setClosureStore('${s}')">${s}店</button>
+  `).join('');
+
+  // Calendar
+  const y=currentYear,m=currentMonth;
+  const days=daysInMonth(y,m);
+  const firstDow=mkDate(y,m,1).getDay();
+  const calEl=document.getElementById('closure-cal');
+
+  let cells='';
+  // Empty cells before month start
+  for(let i=0;i<firstDow;i++) cells+=`<div></div>`;
+  for(let d=1;d<=days;d++){
+    const ds=dsOf(y,m,d);
+    const date=mkDate(y,m,d);
+    const dow=date.getDay();
+    const isSun=dow===0,isSat=dow===6;
+    const closure=getClosureForDate(activeClosureStore,ds);
+    let cls='closure-day';
+    if(isSun) cls+=' sun';
+    if(isSat) cls+=' sat';
+    if(closure==='closed') cls+=' is-closed';
+    if(closure==='half-am') cls+=' is-half-am';
+    if(closure==='half-pm') cls+=' is-half-pm';
+    const tag=closure==='closed'?`<span class="closure-tag closure-tag-closed">全休</span>`:
+      closure==='half-am'?`<span class="closure-tag closure-tag-half">午前半休</span>`:
+      closure==='half-pm'?`<span class="closure-tag closure-tag-half">午後半休</span>`:'';
+    cells+=`<div class="${cls}" onclick="cycleClosureDay('${ds}')" oncontextmenu="clearClosureDay(event,'${ds}')">
+      <div class="closure-day-num" style="color:${isSun?'var(--red)':isSat?'var(--accent)':'var(--text)'}">${d}</div>
+      <div class="closure-day-dow">${DOW[dow]}</div>
+      ${tag}
+    </div>`;
+  }
+  calEl.innerHTML=cells;
+
+  // Summary
+  const sumEl=document.getElementById('closure-summary');
+  const storeClosures=[];
+  for(const key in state.closures){
+    const [store,ds]=key.split('_');
+    if(store===activeClosureStore&&ds.startsWith(`${y}-${padZ(m+1)}`)){
+      const d=parseInt(ds.split('-')[2]);
+      const date=mkDate(y,m,d);
+      storeClosures.push({ds,d,dow:DOW[date.getDay()],type:state.closures[key]});
+    }
+  }
+  storeClosures.sort((a,b)=>a.d-b.d);
+  if(storeClosures.length===0){
+    sumEl.innerHTML=`<div style="color:var(--muted);font-size:12px">今月の設定なし</div>`;
+  } else {
+    sumEl.innerHTML=`<div class="card"><div class="card-title">${activeClosureStore}店 今月の定休・半休（${storeClosures.length}件）</div>`+
+      storeClosures.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(37,45,69,.4)">
+        <span style="font-family:'Space Mono',monospace;font-size:12px">${c.d}日(${c.dow})</span>
+        <span class="stat-badge ${c.type==='closed'?'badge-red':'badge-yellow'}">${c.type==='closed'?'全日定休':c.type==='half-am'?'午前半休':'午後半休'}</span>
+        <button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="clearClosureDay(null,'${c.ds}')">解除</button>
+      </div>`).join('')+'</div>';
+  }
+}
+
+function setClosureStore(store){
+  activeClosureStore=store;
+  renderClosure();
+}
+function cycleClosureDay(ds){
+  const key=`${activeClosureStore}_${ds}`;
+  const cur=state.closures[key]||null;
+  const cycle=[null,'closed','half-am','half-pm'];
+  const idx=cycle.indexOf(cur);
+  const next=cycle[(idx+1)%cycle.length];
+  if(next===null) delete state.closures[key];
+  else state.closures[key]=next;
+  stateMutated();
+  renderClosure();
+  if(currentPage==='dashboard') renderDashboard();
+}
+function clearClosureDay(e,ds){
+  if(e) e.preventDefault();
+  delete state.closures[`${activeClosureStore}_${ds}`];
+  renderClosure();
+}
+
+// ===== STORE VIEW =====
+function renderStore(){
+  const y=currentYear,m=currentMonth;
+  const days=daysInMonth(y,m);
+  document.getElementById('store-grid').innerHTML=STORES.map(store=>{
+    const storeShifts=SHIFT_TYPES.filter(s=>s.store===store);
+    let html=`<div class="store-card-v">
+      <div class="store-card-title">
+        <span class="store-dot" style="background:${STORE_COLORS[store]}"></span>${store}店 月次出勤
+      </div>`;
+    storeShifts.forEach(shift=>{
+      const entries=[];
+      for(let d=1;d<=days;d++){
+        const ds=dsOf(y,m,d);
+        const date=mkDate(y,m,d);
+        state.staff.forEach(s=>{
+          if(state.schedule[`${s.id}_${ds}`]===shift.key)
+            entries.push({name:s.name,d,dow:DOW[date.getDay()]});
+        });
+      }
+      if(!entries.length) return;
+      const byStaff={};
+      entries.forEach(e=>{if(!byStaff[e.name])byStaff[e.name]=[];byStaff[e.name].push(`${e.d}(${e.dow})`);});
+      html+=`<div style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">
+          <span class="shift-chip ${shift.cls}">${shift.label}</span>
+          <span style="font-size:10px;color:var(--muted)">${shift.note}</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:auto">${entries.length}回</span>
+        </div>`;
+      Object.entries(byStaff).forEach(([name,dates])=>{
+        html+=`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:11px;margin-bottom:2px">
+          <strong>${name}</strong> <span style="color:var(--muted)">${dates.join(' / ')}</span>
+        </div>`;
+      });
+      html+=`</div>`;
+    });
+    // Closure info
+    const closureDays=[];
+    for(const key in state.closures){
+      const [s,ds]=key.split('_');
+      if(s===store&&ds.startsWith(`${y}-${padZ(m+1)}`)){
+        const d=parseInt(ds.split('-')[2]);
+        closureDays.push({d,type:state.closures[key]});
+      }
+    }
+    if(closureDays.length>0){
+      html+=`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--red);margin-bottom:4px">定休・半休日</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">
+        ${closureDays.sort((a,b)=>a.d-b.d).map(c=>`<span class="stat-badge ${c.type==='closed'?'badge-red':'badge-yellow'}" style="font-size:10px">${c.d}日</span>`).join('')}
+        </div>
+      </div>`;
+    }
+    html+=`</div>`;
+    return html;
+  }).join('');
+}
+
+// ===== REQUESTS =====
+function renderRequests(){
+  let items=state.requests;
+  if(reqFilter!=='all') items=items.filter(r=>r.status===reqFilter);
+  const tbody=document.getElementById('req-tbody');
+  if(!items.length){
+    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">リクエストなし</td></tr>`;
+    return;
+  }
+  tbody.innerHTML=[...items].reverse().map(r=>{
+    const s=state.staff.find(x=>x.id===r.staffId);
+    const stColor=r.status==='approved'?'var(--green)':r.status==='rejected'?'var(--red)':'var(--yellow)';
+    const stLabel=r.status==='approved'?'承認済み':r.status==='rejected'?'却下':'承認待ち';
+    const typeBadge=r.type==='有給'?`<span class="stat-badge badge-teal">有給</span>`:
+      r.type==='振替'?`<span class="stat-badge badge-orange">振替</span>`:
+      r.type==='振替出勤'?`<span class="stat-badge badge-orange">振替出勤</span>`:
+      `<span class="stat-badge badge-blue">希望</span>`;
+    return `<tr>
+      <td><strong>${s?.name||'?'}</strong></td>
+      <td style="font-family:'Space Mono',monospace;font-size:11px">${r.date}</td>
+      <td>${typeBadge}</td>
+      <td>${shiftChip(r.shift)}</td>
+      <td style="color:var(--muted);font-size:11px">${r.note||'—'}</td>
+      <td><span style="color:${stColor};font-size:12px">● ${stLabel}</span></td>
+      <td style="white-space:nowrap">${r.status==='pending'?`
+        <button class="btn btn-success btn-sm" onclick="approveReq(${r.id})">承認</button>
+        <button class="btn btn-danger btn-sm" onclick="rejectReq(${r.id})">却下</button>`:
+        ''}
+        <button class="btn btn-secondary btn-sm" onclick="deleteReq(${r.id})">削除</button>
+      </td></tr>`;
+  }).join('');
+}
+function filterReq(f,btn){reqFilter=f;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');renderRequests();}
+function approveReq(id){
+  const r=state.requests.find(x=>x.id===id);if(!r)return;
+  r.status='approved';r.updatedAt=dStr(new Date());
+  if(r.shift) state.schedule[`${r.staffId}_${r.date}`]=r.shift;
+  const s=state.staff.find(x=>x.id===r.staffId);
+  if(r.type==='有給'&&s) s.paidLeave=Math.max(0,s.paidLeave-1);
+  if(r.type==='振替'&&s) s.subLeave=Math.max(0,s.subLeave-1);
+  showToast(`${s?.name}のリクエストを承認しました`);stateMutated();renderCurrentPage();
+}
+function rejectReq(id){
+  const r=state.requests.find(x=>x.id===id);if(!r)return;
+  r.status='rejected';r.updatedAt=dStr(new Date());
+  showToast('却下しました','error');stateMutated();renderCurrentPage();
+}
+function deleteReq(id){state.requests=state.requests.filter(x=>x.id!==id);showToast('削除しました');stateMutated();renderCurrentPage();}
+function addRequest(){
+  const staffId=parseInt(document.getElementById('r-staff').value);
+  const date=document.getElementById('r-date').value;
+  const shift=document.getElementById('r-shift').value;
+  const note=document.getElementById('r-note').value.trim();
+  if(!date||!shift){showToast('日付とシフトを選択してください','error');return;}
+  state.requests.push({id:state.nextReqId++,staffId,date,type:'request',shift,note,status:'pending',updatedAt:dStr(new Date())});
+  closeModal('modal-request');
+  document.getElementById('r-date').value='';document.getElementById('r-note').value='';
+  showToast('希望を受け付けました');stateMutated();updateBadges();
+  if(currentPage==='requests') renderRequests();
+}
+function addSpecial(){
+  const staffId=parseInt(document.getElementById('sp-staff').value);
+  const type=document.getElementById('sp-type').value;
+  const date=document.getElementById('sp-date').value;
+  const refDate=document.getElementById('sp-ref-date').value;
+  const note=document.getElementById('sp-note').value.trim();
+  if(!date){showToast('日付を入力してください','error');return;}
+  const shift=type==='有給'?'有給':type==='振替'?'振替':'休日';
+  state.requests.push({id:state.nextReqId++,staffId,date,type,shift,refDate,note,status:'pending',updatedAt:dStr(new Date())});
+  closeModal('modal-special');
+  document.getElementById('sp-date').value='';document.getElementById('sp-ref-date').value='';document.getElementById('sp-note').value='';
+  showToast(`${type}申請を受け付けました`);stateMutated();updateBadges();
+  if(currentPage==='requests') renderRequests();
+}
+
+// ===== STAFF & DEFAULT SHIFTS =====
+function renderStaff(){
+  // Default shift table
+  const shiftOpts=(current)=>SHIFT_TYPES.map(s=>`<option value="${s.key}"${s.key===current?' selected':''}>${s.label}</option>`).join('');
+  document.getElementById('default-shift-tbody').innerHTML=state.staff.map(s=>`
+    <tr>
+      <td><strong>${s.name}</strong></td>
+      <td><select onchange="updateDefault(${s.id},'weekday',this.value)" style="width:130px">${shiftOpts(s.defaultShift?.weekday||'休日')}</select></td>
+      <td><select onchange="updateDefault(${s.id},'saturday',this.value)" style="width:130px">${shiftOpts(s.defaultShift?.saturday||'休日')}</select></td>
+      <td><select onchange="updateDefault(${s.id},'sunday',this.value)" style="width:130px">${shiftOpts(s.defaultShift?.sunday||'休日')}</select></td>
+    </tr>`).join('');
+  // Staff table
+  document.getElementById('staff-tbody').innerHTML=state.staff.map(s=>`
+    <tr>
+      <td><strong>${s.name}</strong></td>
+      <td><span class="stat-badge ${s.role==='正社員'?'badge-teal':s.role==='短時間正社員'?'badge-blue':'badge-yellow'}">${s.role}</span></td>
+      <td style="font-family:'Space Mono',monospace">${s.maxHours}h</td>
+      <td style="font-family:'Space Mono',monospace">${s.maxWeekHours||40}h</td>
+      <td>${s.paidLeave}日</td>
+      <td>${s.subLeave}日</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteStaff(${s.id})">削除</button></td>
+    </tr>`).join('');
+}
+function updateDefault(staffId,type,value){
+  const s=state.staff.find(x=>x.id===staffId);
+  if(s){if(!s.defaultShift)s.defaultShift={};s.defaultShift[type]=value;}
+}
+function addStaff(){
+  const name=document.getElementById('sf-name').value.trim();
+  if(!name){showToast('氏名を入力してください','error');return;}
+  state.staff.push({
+    id:state.nextStaffId++,name,
+    role:document.getElementById('sf-role').value,
+    maxHours:parseInt(document.getElementById('sf-hours').value)||160,
+    maxWeekHours:parseInt(document.getElementById('sf-week-hours').value)||40,
+    paidLeave:parseInt(document.getElementById('sf-paid').value)||0,
+    subLeave:parseInt(document.getElementById('sf-sub').value)||0,
+    defaultShift:{weekday:'休日',saturday:'休日',sunday:'休日'}
+  });
+  closeModal('modal-staff');document.getElementById('sf-name').value='';
+  showToast(`${name}を追加しました`);stateMutated();renderStaff();updateBadges();
+}
+function deleteStaff(id){
+  const s=state.staff.find(x=>x.id===id);
+  if(s&&confirm(`${s.name}を削除しますか？`)){state.staff=state.staff.filter(x=>x.id!==id);renderStaff();}
+}
+
+// ===== AUTO FILL =====
+function autoFillMonth(){
+  const y=currentYear,m=currentMonth;
+  const days=daysInMonth(y,m);
+  const regularShifts=SHIFT_TYPES.filter(s=>!['有給','振替','休日'].includes(s.key));
+  state.staff.forEach(s=>{
+    let monthH=0;
+    for(let d=1;d<=days;d++){
+      const ds=dsOf(y,m,d);
+      const k=`${s.id}_${ds}`;
+      const approved=state.requests.find(r=>r.staffId===s.id&&r.date===ds&&r.status==='approved');
+      if(approved){monthH+=SHIFT_HOURS[approved.shift]||0;continue;}
+      if(state.schedule[k]){monthH+=SHIFT_HOURS[state.schedule[k]]||0;continue;}
+      const date=mkDate(y,m,d);const dow=date.getDay();
+      const remaining=s.maxHours-monthH;
+      if(remaining<=0){state.schedule[k]='休日';continue;}
+      const possible=regularShifts.filter(sh=>{
+        const h=SHIFT_HOURS[sh.key]||0;if(h>remaining)return false;
+        const closure=getClosureForDate(sh.store,ds);if(closure==='closed')return false;
+        const note=sh.note;
+        if(note==='土日'&&dow>=1&&dow<=5)return false;
+        if(note==='土曜日'&&dow!==6)return false;
+        if(note==='平日'&&(dow===0||dow===6))return false;
+        if(note==='月木金'&&![1,4,5].includes(dow))return false;
+        if(note==='火曜日'&&dow!==2)return false;
+        if(note==='水曜日'&&dow!==3)return false;
+        if(note==='月火木金'&&![1,2,4,5].includes(dow))return false;
+        return true;
+      });
+      if(possible.length>0&&Math.random()>0.3){
+        const chosen=possible[Math.floor(Math.random()*possible.length)];
+        state.schedule[k]=chosen.key;monthH+=SHIFT_HOURS[chosen.key]||0;
+      } else {state.schedule[k]='休日';}
+    }
+  });
+  showToast('自動最適化しました！');stateMutated();renderMonthly();
+}
+
+// ===== EXCEL EXPORT =====
+function exportExcel(){
+  const y=currentYear,m=currentMonth;
+  const days=daysInMonth(y,m);
+  const wb=XLSX.utils.book_new();
+
+  // Sheet1: シフト表（縦型）
+  const s1=[
+    [`${y}年 サロンメンバーシフト表`],[],
+    [null,null,null,null,null,null,null,null,null,null,null,null,'該当月：',null,`${y}年${m+1}月`],[],
+    ['イベント','日付','曜日','スタッフ名','シフト区分','勤務開始時間','休憩開始①','休憩終了①','休憩開始②','休憩終了②','勤務終了時間','拘束時間','休憩時間','所定労働時間'],
+  ];
+  for(let d=1;d<=days;d++){
+    const ds=dsOf(y,m,d);
+    const date=mkDate(y,m,d);
+    const dowStr=DOW[date.getDay()]+'曜日';
+    const closures=getAnyClosureForDate(ds);
+    const closureNote=closures.length>0?closures.map(c=>`${c.store}:${c.type==='closed'?'全休':c.type==='half-am'?'午前半休':'午後半休'}`).join('/'):'';
+    state.staff.forEach((s,si)=>{
+      const sh=state.schedule[`${s.id}_${ds}`]||'休日';
+      s1.push([closureNote||null,si===0?d:null,si===0?dowStr:null,s.name,sh,'','','','','','','','','']);
+    });
+  }
+  const ws1=XLSX.utils.aoa_to_sheet(s1);
+  ws1['!cols']=[{wch:14},{wch:7},{wch:6},{wch:8},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:8},{wch:8},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws1,'シフト表');
+
+  // Sheet2: スタッフ別集計
+  const shiftKeys=SHIFT_TYPES.map(s=>s.key);
+  const s2=[[`${y}年${m+1}月 スタッフ別集計`],[],['スタッフ',...shiftKeys,'出勤日数','労働時間','有給残','振替残']];
+  state.staff.forEach(s=>{
+    const counts={};shiftKeys.forEach(k=>counts[k]=0);
+    let totalH=0,totalDays=0;
+    for(let d=1;d<=days;d++){
+      const sh=state.schedule[`${s.id}_${dsOf(y,m,d)}`];
+      if(sh){counts[sh]=(counts[sh]||0)+1;if(!['休日','有給','振替'].includes(sh))totalDays++;totalH+=SHIFT_HOURS[sh]||0;}
+    }
+    s2.push([s.name,...shiftKeys.map(k=>counts[k]||0),totalDays,totalH,s.paidLeave,s.subLeave]);
+  });
+  const ws2=XLSX.utils.aoa_to_sheet(s2);
+  XLSX.utils.book_append_sheet(wb,ws2,'スタッフ別集計');
+
+  // Sheet3: 店舗別出勤
+  const s3=[[`${y}年${m+1}月 店舗別出勤一覧`],[]];
+  STORES.forEach(store=>{
+    s3.push([`【${store}店】`]);
+    // Closures
+    const storeClosures=[];
+    for(const key in state.closures){
+      const[st,ds]=key.split('_');
+      if(st===store&&ds.startsWith(`${y}-${padZ(m+1)}`)){
+        const d=parseInt(ds.split('-')[2]);
+        storeClosures.push(`${d}日(${state.closures[key]==='closed'?'全休':state.closures[key]==='half-am'?'午前半休':'午後半休'})`);
+      }
+    }
+    if(storeClosures.length>0) s3.push([null,'定休・半休',storeClosures.sort().join(' / ')]);
+    SHIFT_TYPES.filter(sh=>sh.store===store).forEach(shift=>{
+      const entries=[];
+      for(let d=1;d<=days;d++){
+        const ds=dsOf(y,m,d);const date=mkDate(y,m,d);
+        state.staff.forEach(s=>{if(state.schedule[`${s.id}_${ds}`]===shift.key)entries.push({name:s.name,d,dow:DOW[date.getDay()]});});
+      }
+      if(!entries.length) return;
+      const byStaff={};entries.forEach(e=>{if(!byStaff[e.name])byStaff[e.name]=[];byStaff[e.name].push(`${e.d}(${e.dow})`);});
+      s3.push([null,`${shift.label}(${shift.note})`]);
+      Object.entries(byStaff).forEach(([name,dates])=>s3.push([null,null,name,dates.join(' / '),`計${dates.length}回`]));
+    });
+    s3.push([]);
+  });
+  const ws3=XLSX.utils.aoa_to_sheet(s3);
+  ws3['!cols']=[{wch:14},{wch:16},{wch:10},{wch:60},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws3,'店舗別出勤');
+
+  // Sheet4: 定休・半休一覧
+  const s4=[[`${y}年${m+1}月 定休・半休日一覧`],[],['店舗','日付','曜日','種別']];
+  for(const key in state.closures){
+    const[store,ds]=key.split('_');
+    if(ds.startsWith(`${y}-${padZ(m+1)}`)){
+      const d=parseInt(ds.split('-')[2]);
+      const date=mkDate(y,m,d);
+      s4.push([store+'店',`${m+1}/${d}`,DOW[date.getDay()]+'曜日',state.closures[key]==='closed'?'全日定休':state.closures[key]==='half-am'?'午前半休（午後営業）':'午後半休（午前営業）']);
+    }
+  }
+  const ws4=XLSX.utils.aoa_to_sheet(s4);ws4['!cols']=[{wch:8},{wch:8},{wch:6},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws4,'定休・半休');
+
+  // Sheet5: 有給・振替
+  const s5=[[`${y}年${m+1}月 有給・振替一覧`],[],['スタッフ','種別','日付','振替元日付','備考','ステータス']];
+  state.requests.filter(r=>['有給','振替','振替出勤'].includes(r.type)).forEach(r=>{
+    const s=state.staff.find(x=>x.id===r.staffId);
+    s5.push([s?.name,r.type,r.date,r.refDate||'—',r.note,r.status==='approved'?'承認済み':r.status==='rejected'?'却下':'承認待ち']);
+  });
+  const ws5=XLSX.utils.aoa_to_sheet(s5);ws5['!cols']=[{wch:10},{wch:10},{wch:12},{wch:12},{wch:20},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws5,'有給・振替');
+
+  XLSX.writeFile(wb,`ShiftFlow_${y}年${m+1}月.xlsx`);
+  showToast('Excelファイルを出力しました！（5シート構成）');
+}
+
+// ===== GAS SYNC =====
+let GAS_URL = ''; // ← ここにGASのURLを貼り付ける（設定画面からも変更可）
+let GAS_PASSWORD = ''; // パスワード
+let autoSaveTimer = null;
+let isSaving = false;
+let lastSavedAt = null;
+
+function setSaveStatus(status, msg) {
+  const el = document.getElementById('save-status');
+  if (!el) return;
+  const map = {
+    idle:    { icon: '💾', color: 'var(--muted)',  text: msg || '未保存の変更あり' },
+    saving:  { icon: '⏳', color: 'var(--yellow)', text: '保存中...' },
+    saved:   { icon: '✅', color: 'var(--green)',  text: msg || '保存済み' },
+    error:   { icon: '❌', color: 'var(--red)',    text: msg || '保存失敗' },
+    nourl:   { icon: '⚙️', color: 'var(--muted)',  text: 'GAS未設定' },
+  };
+  const s = map[status] || map.idle;
+  el.innerHTML = `<span style="color:${s.color}">${s.icon} ${s.text}</span>`;
+}
+
+function scheduleAutoSave() {
+  if (!GAS_URL) { setSaveStatus('nourl'); return; }
+  setSaveStatus('idle');
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => saveToGAS(), 1500); // 1.5秒後に自動保存
+}
+
+async function saveToGAS(showToastMsg = false) {
+  if (!GAS_URL) { showToast('GAS URLを設定してください', 'error'); return; }
+  if (isSaving) return;
+  isSaving = true;
+  setSaveStatus('saving');
+  try {
+    const saveData = {
+      staff: state.staff,
+      schedule: state.schedule,
+      closures: state.closures,
+      requests: state.requests,
+      nextStaffId: state.nextStaffId,
+      nextReqId: state.nextReqId,
+      initialized: state.initialized,
+      savedAt: new Date().toISOString(),
+    };
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'save', data: saveData, password: GAS_PASSWORD }),
+    });
+    const json = await res.json();
+    if (json.ok) {
+      lastSavedAt = new Date();
+      const t = lastSavedAt.toLocaleTimeString('ja-JP');
+      setSaveStatus('saved', `${t} 保存済み`);
+      if (showToastMsg) showToast('スプレッドシートに保存しました ✅');
+    } else {
+      setSaveStatus('error', json.error || '保存失敗');
+    }
+  } catch(e) {
+    setSaveStatus('error', '通信エラー');
+    if (showToastMsg) showToast('保存に失敗しました: ' + e.message, 'error');
+  } finally {
+    isSaving = false;
+  }
+}
+
+async function loadFromGAS() {
+  if (!GAS_URL) { showToast('GAS URLを設定してください', 'error'); openModal('modal-settings'); return; }
+  setSaveStatus('saving');
+  try {
+    const res = await fetch(GAS_URL + '?action=load&password=' + encodeURIComponent(GAS_PASSWORD));
+    const json = await res.json();
+    if (json.ok && json.data) {
+      const d = json.data;
+      if (d.staff)       state.staff       = d.staff;
+      if (d.schedule)    state.schedule    = d.schedule;
+      if (d.closures)    state.closures    = d.closures;
+      if (d.requests)    state.requests    = d.requests;
+      if (d.nextStaffId) state.nextStaffId = d.nextStaffId;
+      if (d.nextReqId)   state.nextReqId   = d.nextReqId;
+      if (d.initialized) state.initialized = d.initialized;
+      const t = d.savedAt ? new Date(d.savedAt).toLocaleString('ja-JP') : '不明';
+      setSaveStatus('saved', `読込済み (${t})`);
+      showToast('データを読み込みました ✅');
+      renderCurrentPage();
+    } else if (json.ok && !json.data) {
+      setSaveStatus('saved', '新規データ');
+      showToast('スプレッドシートにデータがまだありません');
+    } else {
+      setSaveStatus('error');
+      showToast('読み込みに失敗: ' + (json.error || '不明'), 'error');
+    }
+  } catch(e) {
+    setSaveStatus('error', '通信エラー');
+    showToast('読み込み失敗: ' + e.message, 'error');
+  }
+}
+
+function saveGasUrl() {
+  const url = document.getElementById('settings-gas-url').value.trim();
+  const pw  = document.getElementById('settings-gas-pw').value.trim();
+  if (url && !url.startsWith('https://script.google.com')) {
+    showToast('URLが正しくないようです', 'error'); return;
+  }
+  if (!pw) { showToast('パスワードを入力してください', 'error'); return; }
+  GAS_URL = url;
+  GAS_PASSWORD = pw;
+  localStorage.setItem('shiftflow_gas_url', url);
+  localStorage.setItem('shiftflow_gas_pw', pw);
+  closeModal('modal-settings');
+  if (url) {
+    showToast('設定を保存しました。データを読み込みます…');
+    setSaveStatus('idle', 'URL設定済み');
+    setTimeout(() => loadFromGAS(), 300);
+  }
+}
+
+// データ変更時に自動保存をスケジュールするラッパー
+function stateMutated() { scheduleAutoSave(); }
+
+// ===== INIT =====
+updateMonthLabel();
+updateBadges();
+renderDashboard();
+// Pre-set closure store tabs
+document.getElementById('closure-store-tabs').innerHTML=STORES.map(s=>
+  `<button class="store-tab${s===activeClosureStore?' active':''}" style="${s===activeClosureStore?`background:${STORE_COLORS[s]};`:'color:'+STORE_COLORS[s]+';'}" onclick="setClosureStore('${s}')">${s}店</button>`
+).join('');
+
+// GAS URL をlocalStorageから復元して自動読み込み
+const savedUrl = localStorage.getItem('shiftflow_gas_url');
+const savedPw  = localStorage.getItem('shiftflow_gas_pw');
+if (savedUrl) {
+  GAS_URL = savedUrl;
+  GAS_PASSWORD = savedPw || '';
+  document.getElementById('settings-gas-url').value = savedUrl;
+  if (savedPw) document.getElementById('settings-gas-pw').value = savedPw;
+  setSaveStatus('idle', '接続中...');
+  setTimeout(() => loadFromGAS(), 500); // 少し遅らせてUIが描画されてから
+} else {
+  setSaveStatus('nourl');
+  // 初回は設定を促す
+  setTimeout(() => {
+    showToast('⚙️ 左下の「GAS設定」からGoogle連携を設定できます');
+  }, 1000);
+}
+</script>
+
+<div class="overlay" id="modal-settings">
+  <div class="modal">
+    <div class="modal-title">⚙️ Google連携設定</div>
+    <div style="background:rgba(79,140,255,.08);border:1px solid rgba(79,140,255,.2);border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;line-height:1.7">
+      <strong>設定手順：</strong><br>
+      1. Googleスプレッドシートを新規作成<br>
+      2. 「拡張機能」→「Apps Script」を開く<br>
+      3. 配布した <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">ShiftFlow_GAS.js</code> の内容を貼り付け保存<br>
+      4. 「デプロイ」→「新しいデプロイ」→ウェブアプリ<br>
+      5. アクセス：<strong>全員</strong> に設定してデプロイ<br>
+      6. 表示されたURLを下に貼り付ける
+    </div>
+    <div class="form-group">
+      <label>GAS ウェブアプリURL</label>
+      <input id="settings-gas-url" type="url" placeholder="https://script.google.com/macros/s/...">
+    </div>
+    <div class="form-group">
+      <label>パスワード（GASの ACCESS_PASSWORD と同じ値）</label>
+      <input id="settings-gas-pw" type="password" placeholder="例：salon2026">
+    </div>
+    <div id="settings-status" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-settings')">キャンセル</button>
+      <button class="btn btn-teal" onclick="saveGasUrl()">保存して接続</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
