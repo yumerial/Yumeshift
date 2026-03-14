@@ -2304,7 +2304,9 @@ if (savedUrl) {
   document.getElementById('settings-gas-url').value = savedUrl;
   if (savedPw) document.getElementById('settings-gas-pw').value = savedPw;
   setSaveStatus('idle', '接続中...');
-  setTimeout(() => loadFromGAS(), 500); // 少し遅らせてUIが描画されてから
+  if(document.getElementById('admin-main-app').style.display!=='none'){
+    setTimeout(() => loadFromGAS(), 500);
+  }
 } else {
   setSaveStatus('nourl');
   // 初回は設定を促す
