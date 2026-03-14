@@ -174,7 +174,26 @@ select option{background:var(--surface2)}
 </style>
 </head>
 <body>
-<div class="app">
+<!-- 管理者ログイン画面 -->
+<div id="admin-login-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;width:380px;max-width:95vw;text-align:center">
+    <div style="font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:var(--accent);margin-bottom:4px">YumeShift<span style="color:var(--accent2)"> Pro</span></div>
+    <div style="font-size:11px;color:var(--muted);letter-spacing:2px;margin-bottom:8px">管理者画面</div>
+    <div style="font-size:11px;color:var(--teal);margin-bottom:28px;font-weight:600">🔐 管理者専用</div>
+    <div id="admin-login-error" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:7px;padding:10px;font-size:12px;color:var(--red);margin-bottom:14px"></div>
+    <div style="margin-bottom:14px;text-align:left">
+      <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:5px">管理者パスワード</label>
+      <input id="admin-login-pw" type="password" placeholder="管理者パスワードを入力" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter')doAdminLogin()">
+    </div>
+    <button onclick="doAdminLogin()" style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">ログイン</button>
+    <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px">初回設定（GAS URL）</div>
+      <button onclick="openModal('modal-settings')" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit">⚙️ GAS設定</button>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="admin-main-app" style="display:none">
 <!-- Sidebar -->
 <aside class="sidebar">
   <div class="logo">
@@ -207,6 +226,9 @@ select option{background:var(--surface2)}
     <button class="btn btn-primary btn-sm" style="flex:1;font-size:10px" onclick="saveToGAS(true)">💾 保存</button>
   </div>
   <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:4px;font-size:10px" onclick="openModal('modal-settings')">⚙️ GAS設定</button>
+</div>
+<div style="padding:6px 14px;border-top:1px solid var(--border)">
+  <button class="btn btn-secondary btn-sm" style="width:100%;font-size:10px" onclick="changeAdminPassword()">🔑 管理者PW変更</button>
 </div>
 <div class="sidebar-footer">© YumeShift Pro 2026</div>
 </aside>
@@ -2159,6 +2181,59 @@ function exportExcel(){
   showToast('Excelファイルを出力しました！（6シート構成）');
 }
 
+// ===== ADMIN LOGIN =====
+const ADMIN_PASSWORD_KEY = 'yumeshift_admin_pw';
+
+function doAdminLogin(){
+  const pw = document.getElementById('admin-login-pw').value.trim();
+  const errEl = document.getElementById('admin-login-error');
+  if(!pw){
+    errEl.style.display='block';
+    errEl.textContent='パスワードを入力してください';
+    errEl.style.background='rgba(239,68,68,.1)';
+    errEl.style.color='var(--red)';
+    return;
+  }
+  const savedPw = localStorage.getItem(ADMIN_PASSWORD_KEY);
+  if(!savedPw){
+    if(pw.length < 4){
+      errEl.style.display='block';
+      errEl.textContent='パスワードは4文字以上で設定してください';
+      return;
+    }
+    localStorage.setItem(ADMIN_PASSWORD_KEY, pw);
+    enterAdminApp();
+    showToast('管理者パスワードを設定しました');
+    return;
+  }
+  if(pw !== savedPw){
+    errEl.style.display='block';
+    errEl.textContent='パスワードが違います';
+    errEl.style.background='rgba(239,68,68,.1)';
+    errEl.style.color='var(--red)';
+    document.getElementById('admin-login-pw').value='';
+    return;
+  }
+  enterAdminApp();
+}
+
+function enterAdminApp(){
+  document.getElementById('admin-login-screen').style.display='none';
+  document.getElementById('admin-main-app').style.display='flex';
+  // GAS URLがあれば読み込み
+  if(GAS_URL) setTimeout(()=>loadFromGAS(),300);
+}
+
+function changeAdminPassword(){
+  const current = prompt('現在のパスワードを入力してください：');
+  const saved = localStorage.getItem(ADMIN_PASSWORD_KEY);
+  if(current !== saved){ showToast('現在のパスワードが違います','error'); return; }
+  const newPw = prompt('新しいパスワードを入力してください（4文字以上）：');
+  if(!newPw||newPw.length<4){ showToast('パスワードは4文字以上にしてください','error'); return; }
+  localStorage.setItem(ADMIN_PASSWORD_KEY, newPw);
+  showToast('管理者パスワードを変更しました');
+}
+
 // ===== GAS SYNC =====
 let GAS_URL = ''; // ← ここにGASのURLを貼り付ける（設定画面からも変更可）
 let GAS_PASSWORD = ''; // パスワード
@@ -2309,10 +2384,18 @@ if (savedUrl) {
   }
 } else {
   setSaveStatus('nourl');
-  // 初回は設定を促す
-  setTimeout(() => {
-    showToast('⚙️ 左下の「GAS設定」からGoogle連携を設定できます');
-  }, 1000);
+}
+// 初回メッセージ
+const adminPwSaved = localStorage.getItem(ADMIN_PASSWORD_KEY);
+if(!adminPwSaved){
+  const errEl = document.getElementById('admin-login-error');
+  if(errEl){
+    errEl.style.display='block';
+    errEl.textContent='初回ログインです。好きなパスワードを入力して設定してください（4文字以上）';
+    errEl.style.background='rgba(79,140,255,.1)';
+    errEl.style.borderColor='rgba(79,140,255,.3)';
+    errEl.style.color='var(--accent)';
+  }
 }
 </script>
 
