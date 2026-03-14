@@ -121,6 +121,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 @media(max-width:640px){
+  .cal-table{font-size:10px}
+  .cal-table th{padding:3px 2px;font-size:9px;white-space:nowrap}
+  .cal-name-col{min-width:36px;padding:4px 3px;font-size:10px;writing-mode:vertical-rl;text-orientation:mixed;white-space:nowrap;height:60px;vertical-align:middle}
+  .cal-cell{width:28px;height:28px}
+  .shift-chip{font-size:8px;padding:1px 2px;writing-mode:vertical-rl;text-orientation:mixed;display:inline-block;line-height:1.2}
+  .my-row td{background:rgba(79,140,255,.05)!important}
+}
+@media(max-width:640px){
   .app{flex-direction:column}
   .sidebar{width:100%;height:auto;position:sticky;top:0;flex-direction:column;border-right:none;border-bottom:1px solid var(--border);z-index:100}
   .logo{padding:8px 14px;border-bottom:none;display:flex;align-items:center;gap:8px}
@@ -899,20 +907,25 @@ function submitSpecial(){
 function renderMonthly(){
   const y=currentYear,m=currentMonth;
   const days=daysInMonth(y,m);
-  let html=`<table class="cal-table" style="table-layout:fixed;width:100%;min-width:800px">
-    <thead><tr><th style="text-align:left;padding:7px 10px;min-width:65px">スタッフ</th>`;
+  const isMobile=window.innerWidth<=640;
+  const cellW=isMobile?'24px':'auto';
+  const cellPad=isMobile?'2px 1px':'5px';
+  const nameW=isMobile?'36px':'65px';
+  let html=`<table class="cal-table" style="table-layout:fixed;width:100%;min-width:${isMobile?'auto':'800px'}">
+    <thead><tr><th style="text-align:left;padding:${isMobile?'4px 3px':'7px 10px'};min-width:${nameW};width:${nameW}">${isMobile?'名':'スタッフ'}</th>`;
   for(let d=1;d<=days;d++){
     const date=mkDate(y,m,d);
     const dow=date.getDay();
     const isSat=dow===6,isSun=dow===0;
-    html+=`<th style="color:${isSun?'var(--red)':isSat?'var(--accent)':'var(--muted)'}">${d}<br>${DOW[dow]}</th>`;
+    html+=`<th style="color:${isSun?'var(--red)':isSat?'var(--accent)':'var(--muted)'};font-size:${isMobile?'8px':'10px'};padding:${isMobile?'2px 1px':'4px 2px'};width:${cellW}">${d}<br>${DOW[dow]}</th>`;
   }
-  html+=`<th>合計</th></tr></thead><tbody>`;
+  html+=`<th style="font-size:${isMobile?'8px':'10px'};width:${isMobile?'30px':'50px'}">合計</th></tr></thead><tbody>`;
   state.staff.forEach(s=>{
     let monthH=0;
     const isMe=s.id===selectedMemberId;
     html+=`<tr${isMe?' class="my-row"':''}>
-      <td class="cal-name-col"${isMe?` style="color:var(--accent);font-weight:700"`:''}>${s.name}${isMe?' 👤':''}</td>`;
+      <td class="cal-name-col" style="${isMe?'color:var(--accent);font-weight:700;':''
+        }${isMobile?'writing-mode:vertical-rl;text-orientation:mixed;height:52px;vertical-align:middle;font-size:9px;padding:2px 1px;min-width:26px;width:26px':''}">${s.name}${isMe?' 👤':''}</td>`;
     for(let d=1;d<=days;d++){
       const ds=dsOf(y,m,d);
       const date=mkDate(y,m,d);
@@ -920,12 +933,12 @@ function renderMonthly(){
       const sh=state.schedule[`${s.id}_${ds}`];
       monthH+=SHIFT_HOURS[sh]||0;
       const isSat=dow===6,isSun=dow===0;
-      html+=`<td class="cal-cell${isSun?' sun':isSat?' sat':''}">
-        ${sh?`<span class="shift-chip ${shiftInfo(sh).cls}" style="font-size:9px">${shortLabel(sh)}</span>`:'<span class="s-empty" style="font-size:9px">—</span>'}
+      html+=`<td class="cal-cell${isSun?' sun':isSat?' sat':''}" style="padding:${cellPad}">
+        ${sh?`<span class="shift-chip ${shiftInfo(sh).cls}" style="${isMobile?'font-size:7px;padding:1px 1px;writing-mode:vertical-rl;text-orientation:mixed;display:inline-block;line-height:1.1':'font-size:9px'}">${shortLabel(sh)}</span>`:'<span style="color:var(--muted);font-size:7px">—</span>'}
       </td>`;
     }
-    html+=`<td style="text-align:center;padding:5px;background:var(--surface2)">
-      <span style="font-family:'Space Mono',monospace;font-size:11px">${monthH}h</span>
+    html+=`<td style="text-align:center;padding:${cellPad};background:var(--surface2)">
+      <span style="font-family:'Space Mono',monospace;font-size:${isMobile?'8px':'11px'}">${monthH}h</span>
     </td></tr>`;
   });
   html+=`</tbody></table>`;
@@ -948,33 +961,42 @@ function renderWeekly(){
   document.getElementById('week-label').textContent=
     `${currentYear}年${currentMonth+1}月 ${ws.getMonth()+1}/${ws.getDate()} 〜 ${we.getMonth()+1}/${we.getDate()}`;
   const days=Array.from({length:7},(_,i)=>addDays(ws,i));
-  let html=`<table style="border-collapse:collapse;width:100%;font-size:12px;table-layout:fixed">
-    <thead><tr><th style="text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);background:var(--surface2);width:130px">スタッフ</th>`;
+  const isMobile=window.innerWidth<=640;
+  const nameW=isMobile?'36px':'130px';
+  const sumW=isMobile?'36px':'70px';
+  const cellPad=isMobile?'3px':'7px';
+  const namePad=isMobile?'4px 3px':'9px 12px';
+  let html=`<table style="border-collapse:collapse;width:100%;font-size:${isMobile?'10px':'12px'};table-layout:fixed">
+    <thead><tr><th style="text-align:left;padding:${namePad};border-bottom:1px solid var(--border);background:var(--surface2);width:${nameW}">${isMobile?'名':'スタッフ'}</th>`;
   days.forEach(d=>{
     const isSat=d.getDay()===6,isSun=d.getDay()===0;
-    html+=`<th style="border-bottom:1px solid var(--border);padding:7px 8px;text-align:center;background:var(--surface2);color:${isSun?'var(--red)':isSat?'var(--accent)':'var(--muted)'}">${d.getMonth()+1}/${d.getDate()}<br>${DOW[d.getDay()]}</th>`;
+    html+=`<th style="border-bottom:1px solid var(--border);padding:${cellPad};text-align:center;background:var(--surface2);color:${isSun?'var(--red)':isSat?'var(--accent)':'var(--muted)'};font-size:${isMobile?'9px':'11px'}">${d.getMonth()+1}/${d.getDate()}<br>${DOW[d.getDay()]}</th>`;
   });
-  html+=`<th style="border-bottom:1px solid var(--border);padding:7px;text-align:center;background:var(--surface2);width:70px">週計</th></tr></thead><tbody>`;
+  html+=`<th style="border-bottom:1px solid var(--border);padding:${cellPad};text-align:center;background:var(--surface2);width:${sumW};font-size:${isMobile?'9px':'11px'}">週計</th></tr></thead><tbody>`;
   state.staff.forEach(s=>{
     const isMe=s.id===selectedMemberId;
     let weekH=0;
     html+=`<tr${isMe?' style="background:rgba(79,140,255,.05)"':''}>
-      <td style="padding:9px 12px;font-weight:500;background:var(--surface2);${isMe?'color:var(--accent)':''}">${s.name}${isMe?' 👤':''}</td>`;
+      <td style="padding:${namePad};font-weight:500;background:var(--surface2);${isMe?'color:var(--accent)':''}${isMobile?';writing-mode:vertical-rl;text-orientation:mixed;height:52px;vertical-align:middle;font-size:10px':''}">${s.name}${isMe?' 👤':''}</td>`;
     days.forEach(d=>{
       const ds=dStr(d);
       const sh=state.schedule[`${s.id}_${ds}`];
       weekH+=SHIFT_HOURS[sh]||0;
       const isSat=d.getDay()===6,isSun=d.getDay()===0;
-      html+=`<td style="text-align:center;padding:7px;border-left:1px solid var(--border);background:${isSun?'rgba(239,68,68,.03)':isSat?'rgba(79,140,255,.03)':'transparent'}">
-        ${shiftChip(sh)}
+      const chipStyle=isMobile?'font-size:8px;padding:1px 2px;writing-mode:vertical-rl;text-orientation:mixed;display:inline-block;line-height:1.2':'';
+      html+=`<td style="text-align:center;padding:${cellPad};border-left:1px solid var(--border);background:${isSun?'rgba(239,68,68,.03)':isSat?'rgba(79,140,255,.03)':'transparent'}">
+        ${sh?`<span class="shift-chip ${shiftInfo(sh).cls}" style="${chipStyle}">${isMobile?shortLabel(sh):sh}</span>`:'<span style="color:var(--muted);font-size:9px">—</span>'}
       </td>`;
     });
-    html+=`<td style="text-align:center;padding:7px;background:var(--surface2);font-family:'Space Mono',monospace;font-size:11px">${Math.round(weekH*10)/10}h</td></tr>`;
+    html+=`<td style="text-align:center;padding:${cellPad};background:var(--surface2);font-family:'Space Mono',monospace;font-size:${isMobile?'9px':'11px'}">${Math.round(weekH*10)/10}h</td></tr>`;
   });
   html+=`</tbody></table>`;
 
   // 店舗別サマリー
-  html+=`<div style="margin-top:20px;display:grid;grid-template-columns:130px repeat(7,1fr) 70px;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:11px">`;
+  const sumNameW2=isMobile?'36px':'130px';
+  const sumColW=isMobile?'1fr':'1fr';
+  const sumSumW2=isMobile?'36px':'70px';
+  html+=`<div style="margin-top:20px;display:grid;grid-template-columns:${sumNameW2} repeat(7,${sumColW}) ${sumSumW2};border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:${isMobile?'9px':'11px'}">`;
   // ヘッダー行
   html+=`<div style="background:var(--surface2);padding:6px 10px;font-size:10px;color:var(--muted);border-right:1px solid var(--border);border-bottom:1px solid var(--border)">店舗別</div>`;
   days.forEach(d=>{
@@ -1024,9 +1046,9 @@ function renderWeekly(){
         people.forEach(p=>{
           const isMe=state.staff.find(x=>x.name===p.name)?.id===selectedMemberId;
           const info=shiftInfo(p.shift);
-          html+=`<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px">
-            <span style="font-weight:600;font-size:11px;${isMe?'color:var(--accent)':''}">${p.name}${isMe?' 👤':''}</span>
-            <span class="shift-chip ${info.cls}" style="font-size:9px;padding:1px 3px">${p.shift}</span>
+          html+=`<div style="display:flex;align-items:center;gap:2px;margin-bottom:2px;flex-wrap:wrap">
+            <span style="font-weight:600;font-size:${isMobile?'8px':'11px'};${isMe?'color:var(--accent)':''}${isMobile?';writing-mode:vertical-rl;text-orientation:mixed':''}">${p.name}${isMe?' 👤':''}</span>
+            <span class="shift-chip ${info.cls}" style="font-size:${isMobile?'7px':'9px'};padding:1px ${isMobile?'2px':'3px'}${isMobile?';writing-mode:vertical-rl;text-orientation:mixed;display:inline-block':''}">${isMobile?shortLabel(p.shift):p.shift}</span>
           </div>`;
         });
       }
@@ -1038,9 +1060,9 @@ function renderWeekly(){
       restStaff.forEach(p=>{
         const isMe=state.staff.find(x=>x.name===p.name)?.id===selectedMemberId;
         const info=shiftInfo(p.shift);
-        html+=`<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px">
-          <span style="font-weight:600;font-size:11px;${isMe?'color:var(--accent)':''}">${p.name}${isMe?' 👤':''}</span>
-          <span class="shift-chip ${info.cls}" style="font-size:9px;padding:1px 3px">${p.shift}</span>
+        html+=`<div style="display:flex;align-items:center;gap:2px;margin-bottom:2px">
+          <span style="font-weight:600;font-size:${isMobile?'8px':'11px'};${isMe?'color:var(--accent)':''}${isMobile?';writing-mode:vertical-rl;text-orientation:mixed':''}">${p.name}${isMe?' 👤':''}</span>
+          <span class="shift-chip ${info.cls}" style="font-size:${isMobile?'7px':'9px'};padding:1px ${isMobile?'2px':'3px'}${isMobile?';writing-mode:vertical-rl;text-orientation:mixed;display:inline-block':''}">${isMobile?shortLabel(p.shift):p.shift}</span>
         </div>`;
       });
       html+=`</div>`;
