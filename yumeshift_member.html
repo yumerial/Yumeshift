@@ -120,6 +120,29 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:640px){
+  .app{flex-direction:column}
+  .sidebar{width:100%;height:auto;position:sticky;top:0;flex-direction:column;border-right:none;border-bottom:1px solid var(--border);z-index:100}
+  .logo{padding:8px 14px;border-bottom:none;display:flex;align-items:center;gap:8px}
+  .logo-sub,.logo-member{display:none}
+  .nav{flex-direction:row;flex-wrap:nowrap;padding:4px 8px;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .nav-section{display:none}
+  .nav-item{padding:6px 10px;font-size:11px;flex:0 0 auto;white-space:nowrap;border-radius:6px}
+  .nav-icon{display:none}
+  .sidebar-bottom{padding:5px 8px;display:flex;flex-direction:row;gap:4px;align-items:center}
+  .sidebar-bottom button{padding:4px 8px;font-size:10px}
+  #save-status{display:none}
+  .main{margin-left:0;width:100%}
+  .topbar{padding:8px 12px;flex-wrap:wrap;gap:4px}
+  .topbar-title{font-size:14px}
+  .content{padding:10px 10px}
+  .grid-2{grid-template-columns:1fr!important}
+  .info-cards{grid-template-columns:1fr 1fr!important}
+  .cal-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100vw}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100vw}
+  .card{padding:12px}
+  .section-title{font-size:15px}
+}
 </style>
 </head>
 <body>
@@ -246,11 +269,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
       <div class="section-header">
         <div class="section-title">希望を出す</div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
         <!-- 休日希望 -->
         <div class="card">
           <div class="card-title">休日希望</div>
-          <div class="form-group"><label>自分の名前</label><select id="r-staff"></select></div>
+          <input type="hidden" id="r-staff">
           <input type="hidden" id="r-shift" value="休日">
           <div class="form-group"><label>希望日付</label><input id="r-date" type="date"></div>
           <div class="form-group"><label>備考（任意）</label><textarea id="r-note" rows="2" placeholder="例：家庭の事情など"></textarea></div>
@@ -259,7 +282,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
         <!-- 有給・振替申請 -->
         <div class="card">
           <div class="card-title">有給・振替の申請</div>
-          <div class="form-group"><label>自分の名前</label><select id="sp-staff"></select></div>
+          <input type="hidden" id="sp-staff">
           <div class="form-group"><label>種別</label>
             <select id="sp-type">
               <option value="有給">有給休暇</option>
@@ -293,11 +316,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
       <div class="section-header">
         <div class="section-title">遅刻・早退の報告・申請</div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:16px">
         <!-- 遅刻報告 -->
         <div class="card" style="border-left:3px solid var(--red)">
           <div class="card-title" style="color:var(--red)">⏰ 遅刻報告（事後報告）</div>
-          <div class="form-group"><label>自分の名前</label><select id="at-late-staff"></select></div>
+          <input type="hidden" id="at-late-staff">
           <div class="grid-2">
             <div class="form-group"><label>日付</label><input id="at-late-date" type="date"></div>
             <div class="form-group"><label>出勤予定時刻</label><input id="at-late-scheduled" type="time" placeholder="09:30"></div>
@@ -309,7 +332,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
         <!-- 早退申請 -->
         <div class="card" style="border-left:3px solid var(--orange)">
           <div class="card-title" style="color:var(--orange)">🏃 早退申請（事前申請）</div>
-          <div class="form-group"><label>自分の名前</label><select id="at-early-staff"></select></div>
+          <input type="hidden" id="at-early-staff">
           <div class="grid-2">
             <div class="form-group"><label>日付</label><input id="at-early-date" type="date"></div>
             <div class="form-group"><label>退勤予定時刻</label><input id="at-early-scheduled" type="time" placeholder="21:00"></div>
@@ -474,6 +497,11 @@ async function doLogin(){
   document.getElementById('main-app').style.display='flex';
   document.getElementById('logged-in-name').textContent=matched.name;
   setSaveStatus('saved','読込済み');
+  // 全フォームのhidden inputにログイン中のIDをセット
+  ['r-staff','sp-staff','at-late-staff','at-early-staff'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value=matched.id;
+  });
   populateStaffSelects();
   renderCurrentPage();
 }
@@ -654,11 +682,13 @@ function renderCurrentPage(){
 
 // ===== STAFF SELECTS =====
 function populateStaffSelects(){
-  const opts=state.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-  ['r-staff','sp-staff','at-late-staff','at-early-staff'].forEach(id=>{
-    const el=document.getElementById(id);if(el) el.innerHTML=opts;
-  });
-  // r-shiftは hidden input（休日固定）なので設定不要
+  // ログイン中のスタッフIDをhiddenフィールドにセット
+  if(selectedMemberId){
+    ['r-staff','sp-staff','at-late-staff','at-early-staff'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.value=selectedMemberId;
+    });
+  }
 }
 
 // onMemberChange removed - login handles member selection
